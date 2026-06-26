@@ -110,18 +110,23 @@
                     return;
                 }
                 
+                // Split rows safely and clean out carriage returns completely
                 let rows = data.split(/\r?\n/).slice(1);
                 events = {};
 
                 rows.forEach(row => {
                     if (!row.trim()) return;
-                    let columns = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    
+                    // Universal split that handles clean values
+                    let columns = row.split(',');
                     
                     if (columns.length >= 3) {
-                        let dateStr = columns[0].trim().replace(/^"|"/g, '');
-                        let rawPeriod = columns[1].trim().toUpperCase().replace(/^"|"/g, '');
-                        let eventText = columns[2] ? columns[2].replace(/^"|"/g, '').replace(/\\n/g, '\n').trim() : "";
+                        // Clean quotes, spaces, and hidden characters from every cell cleanly
+                        let dateStr = columns[0].replace(/["\r\n]/g, '').trim();
+                        let rawPeriod = columns[1].replace(/["\r\n]/g, '').trim().toUpperCase();
+                        let eventText = columns[2].replace(/["\r\n]/g, '').replace(/\\n/g, '\n').trim();
 
+                        // Map spreadsheet period text to HTML option values
                         let periodKey = "";
                         if (rawPeriod === "2") periodKey = "period1";
                         if (rawPeriod === "3B" || rawPeriod === "3") periodKey = "period2";
