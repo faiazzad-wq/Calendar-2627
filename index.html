@@ -200,28 +200,31 @@
     var months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
     // Fetch and parse data from Google Sheet CSV output
-    function loadEventsFromGoogleSheet() {
+  function loadEventsFromGoogleSheet() {
     const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1nO7Z8-25ZzQyOQ-5h2Y6h8vY_q2tT8C-9yO8k_Y8N8x9L6u_Z3_M6pB-B7V8X/pub?output=csv';
 
     fetch(sheetUrl)
         .then(response => response.text())
         .then(data => {
-            if (!data) return;
-            
-            let rows = data.split('\n').slice(1); // Skip header row
-            events = {}; // Reset the main global events object
+            if (!data) {
+                generateCalendar(currentMonth, currentYear);
+                return;
+            }
+
+            let rows = data.split('\n').slice(1); // Skips the header row
+            events = {}; // Reset the global events dictionary
 
             rows.forEach(row => {
                 if (!row.trim()) return;
 
-                // Split by commas while safely handling quotes
+                // Split by commas while safely respecting quotes around text entries
                 let columns = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                 if (columns.length >= 3) {
                     var dateStr = columns[0].trim();
                     var displayPeriod = columns[1] ? columns[1].trim().toUpperCase() : "";
                     var eventText = columns[2] ? columns[2].replace(/^"|"/g, '').replace(/\\n/g, '\n').trim() : "";
 
-                    // Match your exact spreadsheet values directly to your HTML dropdown select options
+                    // Safe conversion mapping that bypasses loose dictionaries
                     var internalPeriodKey = "";
                     if (displayPeriod === "2" || displayPeriod === "PERIOD 2") {
                         internalPeriodKey = "period1";
@@ -231,7 +234,7 @@
                         internalPeriodKey = "period3";
                     }
 
-                    // Save valid data into the map
+                    // Securely assign the event data
                     if (internalPeriodKey && dateStr) {
                         if (!events[dateStr]) {
                             events[dateStr] = {};
@@ -241,17 +244,17 @@
                 }
             });
 
-            // CRITICAL: Triggers the calendar grid to draw on the screen
+            // Re-render the grid layouts now that processing is 100% finished
             generateCalendar(currentMonth, currentYear);
         })
         .catch(error => {
             console.error('Error loading Google Sheet data:', error);
-            // Fallback: draw calendar even if spreadsheet fetch fails
+            // Fallback: renders the structural calendar grid even if the network request fails
             generateCalendar(currentMonth, currentYear);
         });
 }
 
-// Make sure your initial page load still calls the layout builder
+// Make sure the calendar layout initiates when page loading finishes
 window.onload = function() {
     generateCalendar(currentMonth, currentYear);
     loadEventsFromGoogleSheet();
