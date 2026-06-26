@@ -108,7 +108,7 @@
 
     // 3. Google Sheets Live Data Connector
     function loadEventsFromGoogleSheet() {
-    // Keeps your fresh link and preserves the live cachebust trigger
+    // Keeps your link alive with the bypass cache parameters intact
     const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1nO7Z8-25ZzQyOQ-5h2Y6h8vY_q2tT8C-9yO8k_Y8N8x9L6u_Z3_M6pB-B7V8X/pub?output=csv&cachebust=' + new Date().getTime();
 
     fetch(sheetUrl)
@@ -125,15 +125,16 @@
             rows.forEach(row => {
                 if (!row || !row.trim()) return;
                 
-                // Advanced regex split that correctly handles spaces and columns wrapped in quotes
-                let columns = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                // Splitting rows cleanly
+                let columns = row.split(',');
                 
-                if (columns && columns.length >= 2) {
-                    // Strips outer quotes and hidden trailing spaces from the data strings
-                    let rawDate = columns[0] ? columns[0].replace(/^"|"$|[\r\n]/g, '').trim() : '';
-                    let periodKey = columns[1] ? columns[1].replace(/^"|"$|[\r\n]/g, '').trim() : '';
-                    let eventText = columns[2] ? columns[2].replace(/^"|"$|[\r\n]/g, '').replace(/\\n/g, '\n').trim() : '';
+                // TARGETED CHECK: We only care about columns 0, 1, and 2 being present
+                if (columns && columns.length >= 3) {
+                    let rawDate = columns[0].replace(/["\r\n]/g, '').trim();
+                    let periodKey = columns[1].replace(/["\r\n]/g, '').trim();
+                    let eventText = columns[2].replace(/["\r\n]/g, '').replace(/\\n/g, '\n').trim();
 
+                    // Standardize any YYYY-MM-DD variants coming out of the spreadsheet
                     let dateStr = "";
                     let dateParts = rawDate.split(/[-/]/); 
                     if (dateParts.length === 3) {
@@ -145,6 +146,7 @@
                         dateStr = rawDate;
                     }
 
+                    // Save data specifically if we have a valid date and period identifier
                     if (dateStr && periodKey) {
                         if (!events[dateStr]) events[dateStr] = {};
                         events[dateStr][periodKey] = eventText;
