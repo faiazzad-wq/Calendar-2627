@@ -127,8 +127,7 @@
 
                     // Force single digit dates/months to pad zeros safely (YYYY-MM-DD)
                     let dateStr = "";function loadEventsFromGoogleSheet() {
-    const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1nO7Z8-25ZzQyOQ-5h2Y6h8vY_q2tT8C-9yO8k_Y8N8x9L6u_Z3_M6pB-B7V8X/pub?output=csv';
-
+const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1nO7Z8-25ZzQyOQ-5h2Y6h8vY_q2tT8C-9yO8k_Y8N8x9L6u_Z3_M6pB-B7V8X/pub?output=csv&cachebust=' + new Date().getTime();
     fetch(sheetUrl)
         .then(response => response.text())
         .then(data => {
