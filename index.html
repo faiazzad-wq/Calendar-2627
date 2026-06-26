@@ -30,6 +30,7 @@
         }
         .admin-toggle {
             float: right;
+            display: none; /* Hidden since adding/saving is now done directly in Google Sheets */
         }
         .header { 
             text-align: center;
@@ -47,7 +48,6 @@
             cursor: pointer;
         }
         
-        /* Using a traditional, bulletproof HTML Table instead of CSS Grid */
         table.calendar-table {
             width: 100%;
             border-collapse: collapse;
@@ -90,7 +90,6 @@
             right: 8px; 
         }
         
-        /* Modal Popup Styles */
         .modal { 
             display: none; 
             position: fixed; 
@@ -155,7 +154,7 @@
             </tr>
         </thead>
         <tbody id="calendarBody">
-            </tbody>
+        </tbody>
     </table>
 </div>
 
@@ -173,23 +172,64 @@
 </div>
 
 <script>
-    // Universal data setup
+    // Configuration details for Google Sheet integration
+    var SPREADSHEET_ID = '1pyS_GsSr1d0f6CC3di2hlpbtWswwECPitqaYln30jOM';
+    var CSV_URL = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID + '/gviz/tq?tqx=out:csv';
+
+    // Map display values back from Google Sheet column input to internal variables
+    var periodMap = {
+        "2": "period1",
+        "Period 2": "period1",
+        "3B": "period2",
+        "Period 3B": "period2",
+        "4": "period3",
+        "Period 4": "period3"
+    };
+
     var currentData = { period1: {}, period2: {}, period3: {} };
-    try {
-        var savedData = localStorage.getItem('classCalendarDataMulti');
-        if (savedData) {
-            currentData = JSON.parse(savedData);
-        }
-    } catch (e) {
-        // Fallback for strict browser cookie/privacy rules
-        currentData = { period1: {}, period2: {}, period3: {} };
-    }
-    
     var currentDate = new Date();
     var selectedDateStr = "";
     var selectedPeriod = "period1";
     var isTeacher = false;
     var months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+    // Fetch and parse data from Google Sheet CSV output
+    function loadEventsFromGoogleSheet() {
+        fetch(CSV_URL)
+            .then(function(response) { return response.text(); })
+            .then(function(data) {
+                var lines = data.split('\n');
+                // Clear out existing object
+                currentData = { period1: {}, period2: {}, period3: {} };
+                
+                // Process lines starting at index 1 to skip header row
+                for (var i = 1; i < lines.length; i++) {
+                    if (lines[i].trim() === "") continue;
+                    
+                    // Regex splitting logic cleanly handles quoted string sequences
+                    var columns = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    for (var j = 0; j < columns.length; j++) {
+                        columns[j] = columns[j].replace(/^"|"$/g, '').trim();
+                    }
+                    
+                    if (columns.length >= 3) {
+                        var dateKey = columns[0];   // e.g. "2026-09-08"
+                        var displayPeriod = columns[1]; // e.g. "2" or "3B" or "4"
+                        var eventText = columns[2].replace(/\\n/g, '\n'); // parse virtual lines back to breaks
+                        
+                        var internalPeriodKey = periodMap[displayPeriod];
+                        if (internalPeriodKey && dateKey) {
+                            currentData[internalPeriodKey][dateKey] = eventText;
+                        }
+                    }
+                }
+                renderCalendar();
+            })
+            .catch(function(error) {
+                console.error("Error loading calendar items:", error);
+                renderCalendar();
+            });
+    }
 
     function toggleMode() {
         isTeacher = document.getElementById('teacherMode').checked;
@@ -218,7 +258,6 @@
         var year = currentDate.getFullYear();
         var month = currentDate.getMonth();
         
-        // Update Title Display
         document.getElementById('monthYear').innerHTML = months[month] + " " + year;
         
         var firstDayIndex = new Date(year, month, 1).getDay();
@@ -226,13 +265,12 @@
         
         var tbody = document.getElementById('calendarBody');
         if(!tbody) return;
-        tbody.innerHTML = ""; // Clear existing grid Safely
+        tbody.innerHTML = "";
 
         var dayCounter = 1;
         
-        // Build rows manually using standard DOM tables
         for (var row = 0; row < 6; row++) {
-            if (dayCounter > lastDay) break; // Stop making rows if month finished
+            if (dayCounter > lastDay) break;
             
             var tr = document.createElement('tr');
             
@@ -240,28 +278,22 @@
                 var td = document.createElement('td');
                 
                 if (row === 0 && col < firstDayIndex) {
-                    // Blank leading days
                     td.className = "empty";
                 } else if (dayCounter > lastDay) {
-                    // Blank ending days
                     td.className = "empty";
                 } else {
-                    // Valid Calendar Day
                     td.innerHTML = '<span class="date-num">' + dayCounter + '</span>';
                     
-                    // Create Date code string: YYYY-MM-DD
                     var mStr = String(month + 1); if(mStr.length < 2) mStr = "0" + mStr;
                     var dStr = String(dayCounter); if(dStr.length < 2) dStr = "0" + dStr;
                     var fullDateStr = year + "-" + mStr + "-" + dStr;
                     
-                    // Green dot check
                     if (currentData[selectedPeriod] && currentData[selectedPeriod][fullDateStr]) {
                         var dot = document.createElement('div');
                         dot.className = "has-work";
                         td.appendChild(dot);
                     }
                     
-                    // Scope closure explicitly to avoid index reference errors
                     (function(dStrCode) {
                         td.onclick = function() { openModal(dStrCode); };
                     })(fullDateStr);
@@ -280,8 +312,9 @@
         var displayDate = months[parseInt(parts[1], 10) - 1] + " " + parseInt(parts[2], 10) + ", " + parts[0];
         
         document.getElementById('modalDateTitle').innerHTML = displayDate;
-	var selectElement = document.getElementById('periodSelect');
-	document.getElementById('modalPeriodTitle').innerHTML = 	selectElement.options[selectElement.selectedIndex].text;        
+        var selectElement = document.getElementById('periodSelect');
+        document.getElementById('modalPeriodTitle').innerHTML = selectElement.options[selectElement.selectedIndex].text;        
+        
         var savedText = "";
         if(currentData[selectedPeriod] && currentData[selectedPeriod][dateStr]) {
             savedText = currentData[selectedPeriod][dateStr];
@@ -293,29 +326,28 @@
             document.getElementById('viewWorkText').style.display = "none";
             document.getElementById('editWorkText').value = savedText;
         } else {
-    document.getElementById('editWorkText').style.display = "none";
-    document.getElementById('saveBtn').style.display = "none";
-    document.getElementById('viewWorkText').style.display = "block";
-    
-    if (savedText && savedText !== "No work logged for this period today.") {
-        // Split text by lines, clean up empty lines, and wrap in bullet points
-        var lines = savedText.split('\n');
-        var bulletList = '<ul style="margin: 0; padding-left: 20px; text-align: left;">';
-        var hasContent = false;
-        
-        for (var l = 0; l < lines.length; l++) {
-            if (lines[l].replace(/^\s+|\s+$/g, '') !== "") {
-                bulletList += '<li style="margin-bottom: 5px;">' + lines[l] + '</li>';
-                hasContent = true;
+            document.getElementById('editWorkText').style.display = "none";
+            document.getElementById('saveBtn').style.display = "none";
+            document.getElementById('viewWorkText').style.display = "block";
+            
+            if (savedText && savedText !== "No work logged for this period today.") {
+                var lines = savedText.split('\n');
+                var bulletList = '<ul style="margin: 0; padding-left: 20px; text-align: left;">';
+                var hasContent = false;
+                
+                for (var l = 0; l < lines.length; l++) {
+                    if (lines[l].replace(/^\s+|\s+$/g, '') !== "") {
+                        bulletList += '<li style="margin-bottom: 5px;">' + lines[l] + '</li>';
+                        hasContent = true;
+                    }
+                }
+                bulletList += '</ul>';
+                
+                document.getElementById('viewWorkText').innerHTML = hasContent ? bulletList : "No work logged for this period today.";
+            } else {
+                document.getElementById('viewWorkText').innerHTML = "No work logged for this period today.";
             }
         }
-        bulletList += '</ul>';
-        
-        document.getElementById('viewWorkText').innerHTML = hasContent ? bulletList : "No work logged for this period today.";
-    } else {
-        document.getElementById('viewWorkText').innerHTML = "No work logged for this period today.";
-    }
-}
         
         document.getElementById('workModal').style.display = "flex";
     }
@@ -325,28 +357,13 @@
     }
 
     function saveWork() {
-        var text = document.getElementById('editWorkText').value;
-        if (!currentData[selectedPeriod]) {
-            currentData[selectedPeriod] = {};
-        }
-
-        if(text.replace(/^\s+|\s+$/g, '') === "") {
-            delete currentData[selectedPeriod][selectedDateStr];
-        } else {
-            currentData[selectedPeriod][selectedDateStr] = text;
-        }
-        
-        try {
-            localStorage.setItem('classCalendarDataMulti', JSON.stringify(currentData));
-        } catch(e) {}
-        
+        // Disabled local client writing since data updates are managed on the cloud source spreadsheet
         closeModal();
-        renderCalendar();
     }
 
-    // Safest script initialization hook possible
+    // Initialize data setup from sheet
     setTimeout(function() {
-        renderCalendar();
+        loadEventsFromGoogleSheet();
     }, 100);
 </script>
 </body>
