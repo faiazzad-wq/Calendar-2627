@@ -200,7 +200,7 @@
     var months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
     // Fetch and parse data from Google Sheet CSV output
- function loadEventsFromGoogleSheet() {
+function loadEventsFromGoogleSheet() {
     const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1nO7Z8-25ZzQyOQ-5h2Y6h8vY_q2tT8C-9yO8k_Y8N8x9L6u_Z3_M6pB-B7V8X/pub?output=csv';
 
     fetch(sheetUrl)
@@ -208,47 +208,42 @@
         .then(data => {
             if (!data) return;
             
-            let rows = data.split(/\r?\n/).slice(1); // Handles Windows/Mac line endings safely
-            events = {}; // Reset events object
+            // Handle both Windows and Mac line breaks cleanly
+            let rows = data.split(/\r?\n/).slice(1); 
+            events = {}; 
 
             rows.forEach(row => {
                 if (!row.trim()) return;
 
-                let columns = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                // Robust split: accepts commas OR semicolons safely
+                let columns = row.split(/[,;](?=(?:(?:[^"]*"){2})*[^"]*$)/);
                 if (columns.length >= 3) {
-                    var rawDate = columns[0].trim().replace(/^"|"/g, '');
-                    var rawPeriod = columns[1].trim().toUpperCase().replace(/^"|"/g, '');
+                    var dateStr = columns[0].trim().replace(/^"|"/g, '');
+                    var rawPeriod = columns[1] ? columns[1].trim().toUpperCase().replace(/^"|"/g, '') : "";
                     var eventText = columns[2] ? columns[2].replace(/^"|"/g, '').replace(/\\n/g, '\n').trim() : "";
 
-                    if (!rawDate) return;
-
-                    // 1. Create alternative date format without leading zeros (e.g., "2026-9-8")
-                    var altDate = rawDate;
-                    var dateParts = rawDate.split('-');
-                    if (dateParts.length === 3) {
-                        altDate = dateParts[0] + "-" + parseInt(dateParts[1], 10) + "-" + parseInt(dateParts[2], 10);
+                    // Translate spreadsheet text directly to your internal dropdown values
+                    var periodKey = "";
+                    if (rawPeriod === "2" || rawPeriod === "PERIOD 2") {
+                        periodKey = "period1";
+                    } else if (rawPeriod === "3B" || rawPeriod === "PERIOD 3B" || rawPeriod === "3") {
+                        periodKey = "period2";
+                    } else if (rawPeriod === "4" || rawPeriod === "PERIOD 4") {
+                        periodKey = "period3";
+                    } else {
+                        periodKey = rawPeriod.toLowerCase(); // Fallback
                     }
 
-                    // 2. Determine alternative period keys
-                    var altPeriod = rawPeriod;
-                    if (rawPeriod === "2")  altPeriod = "PERIOD1";
-                    if (rawPeriod === "3B") altPeriod = "PERIOD2";
-                    if (rawPeriod === "4")  altPeriod = "PERIOD3";
-
-                    // 3. Save entry under ALL possible combinations so it cannot fail to match
-                    var datesToSave = [rawDate, altDate];
-                    var periodsToSave = [rawPeriod, rawPeriod.toLowerCase(), altPeriod, altPeriod.toLowerCase()];
-
-                    datesToSave.forEach(d => {
-                        if (!events[d]) events[d] = {};
-                        periodsToSave.forEach(p => {
-                            events[d][p] = eventText;
-                        });
-                    });
+                    if (dateStr && periodKey) {
+                        if (!events[dateStr]) {
+                            events[dateStr] = {};
+                        }
+                        events[dateStr][periodKey] = eventText;
+                    }
                 }
             });
 
-            // Redraw the calendar grid with the heavily mapped data
+            // Re-render the calendar layout on screen with the new data loaded
             generateCalendar(currentMonth, currentYear);
         })
         .catch(error => {
