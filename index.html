@@ -176,13 +176,14 @@
     var SPREADSHEET_ID = '1pyS_GsSr1d0f6CC3di2hlpbtWswwECPitqaYln30jOM';
     var CSV_URL = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID + '/gviz/tq?tqx=out:csv';
 
-    // Map display values back from Google Sheet column input to internal variables
+   // Corrected map to align your spreadsheet numbers to your calendar options
     var periodMap = {
-        "2": "period1",
+        "2": "period1",        // Spreadsheet '2' goes to the first option (Period 2)
         "Period 2": "period1",
+        "3": "period2",        // Spreadsheet '3' now correctly goes to the second option (Period 3B)
         "3B": "period2",
         "Period 3B": "period2",
-        "4": "period3",
+        "4": "period3",        // Spreadsheet '4' goes to the third option (Period 4)
         "Period 4": "period3"
     };
 
