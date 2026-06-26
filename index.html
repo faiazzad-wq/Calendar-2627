@@ -27,10 +27,10 @@
         <h2 id="monthYearDisplay"></h2>
         <div class="controls">
             <select id="periodSelect" onchange="updateCalendar()">
-                <option value="period1">Période 2</option>
-                <option value="period2">Période 3B</option>
-                <option value="period3">Période 4</option>
-            </select>
+    <option value="2">Période 2</option>
+    <option value="3B">Période 3B</option>
+    <option value="4">Période 4</option>
+</select>
             <button onclick="prevMonth()">Précédent</button>
             <button onclick="nextMonth()">Suivant</button>
         </div>
@@ -120,10 +120,10 @@
                 
                 if (columns.length >= 3) {
                     let rawDate = columns[0].replace(/["\r\n]/g, '').trim();
-                    let rawPeriod = columns[1].replace(/["\r\n]/g, '').trim().toUpperCase();
+                    let periodKey = columns[1].replace(/["\r\n]/g, '').trim().toUpperCase(); // Will be "2", "3B", or "4"
                     let eventText = columns[2].replace(/["\r\n]/g, '').replace(/\\n/g, '\n').trim();
 
-                    // Cleanly force single digit months/days to pad zeros (transforms 2026-9-8 into 2026-09-08)
+                    // Pad single digit dates to match the calendar grid (YYYY-MM-DD)
                     let dateStr = "";
                     let dateParts = rawDate.split(/[-/]/); 
                     if (dateParts.length === 3) {
@@ -134,11 +134,6 @@
                     } else {
                         dateStr = rawDate;
                     }
-
-                    let periodKey = "";
-                    if (rawPeriod === "2") periodKey = "period1";
-                    if (rawPeriod === "3B" || rawPeriod === "3") periodKey = "period2";
-                    if (rawPeriod === "4") periodKey = "period3";
 
                     if (dateStr && periodKey) {
                         if (!events[dateStr]) events[dateStr] = {};
@@ -153,7 +148,6 @@
             generateCalendar(currentMonth, currentYear);
         });
 }
-
     function updateCalendar() { 
         generateCalendar(currentMonth, currentYear); 
     }
