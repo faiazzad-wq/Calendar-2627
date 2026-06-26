@@ -40,7 +40,7 @@
 </div>
 
 <script>
-    let currentMonth = 8; // Default to September
+    let currentMonth = 8; // Default to September (0-indexed, so 8 = September)
     let currentYear = 2026;
     let events = {};
 
@@ -51,7 +51,7 @@
         const display = document.getElementById('monthYearDisplay');
         const periodSelect = document.getElementById('periodSelect');
         
-        // Complete safety check to prevent layout crashes
+        // Critical safety check: If layout elements aren't ready, don't crash
         if (!grid || !display || !periodSelect) return;
         
         const selectedPeriod = periodSelect.value;
@@ -101,7 +101,7 @@
     }
 
     function loadEventsFromGoogleSheet() {
-        // Appends a live timestamp to bypass Google's link caching mechanism completely
+        // Cache bust parameter forces Google to serve live spreadsheet edits instantly
         const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1nO7Z8-25ZzQyOQ-5h2Y6h8vY_q2tT8C-9yO8k_Y8N8x9L6u_Z3_M6pB-B7V8X/pub?output=csv&cachebust=' + new Date().getTime();
 
         fetch(sheetUrl)
@@ -116,11 +116,11 @@
                 events = {};
 
                 rows.forEach(row => {
-                    if (!row.trim()) return;
+                    if (!row || !row.trim()) return;
                     
                     let columns = row.split(',');
                     if (columns && columns.length >= 2) {
-                        // Safely handle text conversions without throwing crashes
+                        // Safe fallback parsing prevents undefined script crashes
                         let rawDate = columns[0] ? String(columns[0]).replace(/["\r\n]/g, '').trim() : '';
                         let periodKey = columns[1] ? String(columns[1]).replace(/["\r\n]/g, '').trim() : '';
                         let eventText = columns[2] ? String(columns[2]).replace(/["\r\n]/g, '').replace(/\\n/g, '\n').trim() : '';
