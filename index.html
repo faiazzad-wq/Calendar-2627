@@ -222,11 +222,25 @@
                 let columns = row.split(/[,;](?=(?:(?:[^"]*"){2})*[^"]*$)/);
                 
                 if (columns.length >= 3) {
-                    var dateStr = columns[0].trim().replace(/^"|"/g, '');
+                    var rawDate = columns[0].trim().replace(/^"|"/g, '');
                     var displayPeriod = columns[1] ? columns[1].trim().toUpperCase().replace(/^"|"/g, '') : "";
                     var eventText = columns[2] ? columns[2].replace(/^"|"/g, '').replace(/\\n/g, '\n').trim() : "";
 
-                    // Cross-wired mapping fallback to ensure compatibility
+                    // Standardize the date string to remove leading zeros (e.g., "2026-09-08" becomes "2026-9-8")
+                    var dateStr = "";
+                    if (rawDate) {
+                        var dateParts = rawDate.split('-');
+                        if (dateParts.length === 3) {
+                            var year = dateParts[0];
+                            var month = parseInt(dateParts[1], 10); // Removes leading zero
+                            var day = parseInt(dateParts[2], 10);   // Removes leading zero
+                            dateStr = year + "-" + month + "-" + day;
+                        } else {
+                            dateStr = rawDate; // Fallback
+                        }
+                    }
+
+                    // Direct connection to your HTML dropdown menu values
                     var internalPeriodKey = "";
                     if (displayPeriod === "2" || displayPeriod === "PERIOD 2") {
                         internalPeriodKey = "period1";
