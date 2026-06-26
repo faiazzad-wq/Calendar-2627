@@ -108,55 +108,56 @@
 
     // 3. Google Sheets Live Data Connector
     function loadEventsFromGoogleSheet() {
-        const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQWlW91h2aX_s2ZnA7TK8UxhkmjfGAKE3S-oL316L8PKzD7oBxHJmTdJMZOadpEwOr1o_A0AhxXuFNU/pub?gid=0&single=true&output=csv&cachebust=' + new Date().getTime();
+    // Keeps your fresh link and preserves the live cachebust trigger
+    const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1nO7Z8-25ZzQyOQ-5h2Y6h8vY_q2tT8C-9yO8k_Y8N8x9L6u_Z3_M6pB-B7V8X/pub?output=csv&cachebust=' + new Date().getTime();
 
-        fetch(sheetUrl)
-            .then(response => response.text())
-            .then(data => {
-                if (!data) {
-                    generateCalendar(currentMonth, currentYear);
-                    return;
-                }
+    fetch(sheetUrl)
+        .then(response => response.text())
+        .then(data => {
+            if (!data) {
+                generateCalendar(currentMonth, currentYear);
+                return;
+            }
+            
+            let rows = data.split(/\r?\n/).slice(1);
+            events = {};
+
+            rows.forEach(row => {
+                if (!row || !row.trim()) return;
                 
-                let rows = data.split(/\r?\n/).slice(1);
-                events = {};
+                // Advanced regex split that correctly handles spaces and columns wrapped in quotes
+                let columns = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                
+                if (columns && columns.length >= 2) {
+                    // Strips outer quotes and hidden trailing spaces from the data strings
+                    let rawDate = columns[0] ? columns[0].replace(/^"|"$|[\r\n]/g, '').trim() : '';
+                    let periodKey = columns[1] ? columns[1].replace(/^"|"$|[\r\n]/g, '').trim() : '';
+                    let eventText = columns[2] ? columns[2].replace(/^"|"$|[\r\n]/g, '').replace(/\\n/g, '\n').trim() : '';
 
-                rows.forEach(row => {
-                    if (!row || !row.trim()) return;
-                    
-                    let columns = row.split(',');
-                    if (columns && columns.length >= 2) {
-                        // Safe text fallback processing
-                        let rawDate = columns[0] ? String(columns[0]).replace(/["\r\n]/g, '').trim() : '';
-                        let periodKey = columns[1] ? String(columns[1]).replace(/["\r\n]/g, '').trim() : '';
-                        let eventText = columns[2] ? String(columns[2]).replace(/["\r\n]/g, '').replace(/\\n/g, '\n').trim() : '';
-
-                        // Pad missing zeros for short date formats safely
-                        let dateStr = "";
-                        let dateParts = rawDate.split(/[-/]/); 
-                        if (dateParts.length === 3) {
-                            let year = dateParts[0];
-                            let month = String(parseInt(dateParts[1], 10)).padStart(2, '0');
-                            let day = String(parseInt(dateParts[2], 10)).padStart(2, '0');
-                            dateStr = `${year}-${month}-${day}`;
-                        } else {
-                            dateStr = rawDate;
-                        }
-
-                        if (dateStr && periodKey) {
-                            if (!events[dateStr]) events[dateStr] = {};
-                            events[dateStr][periodKey] = eventText;
-                        }
+                    let dateStr = "";
+                    let dateParts = rawDate.split(/[-/]/); 
+                    if (dateParts.length === 3) {
+                        let year = dateParts[0];
+                        let month = String(parseInt(dateParts[1], 10)).padStart(2, '0');
+                        let day = String(parseInt(dateParts[2], 10)).padStart(2, '0');
+                        dateStr = `${year}-${month}-${day}`;
+                    } else {
+                        dateStr = rawDate;
                     }
-                });
-                generateCalendar(currentMonth, currentYear);
-            })
-            .catch(error => {
-                console.error("Error loading CSV file:", error);
-                generateCalendar(currentMonth, currentYear);
-            });
-    }
 
+                    if (dateStr && periodKey) {
+                        if (!events[dateStr]) events[dateStr] = {};
+                        events[dateStr][periodKey] = eventText;
+                    }
+                }
+            });
+            generateCalendar(currentMonth, currentYear);
+        })
+        .catch(error => {
+            console.error("Error loading CSV file:", error);
+            generateCalendar(currentMonth, currentYear);
+        });
+}
     // 4. Navigation Layout Handlers
     function updateCalendar() { 
         generateCalendar(currentMonth, currentYear); 
