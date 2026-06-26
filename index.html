@@ -218,20 +218,20 @@
                         columns[j] = columns[j].replace(/^"|"$/g, '').trim();
                     }
                     
-                    // 1. Clear out your old periodMap dictionary entirely if it's there.
+                   // 1. Completely delete the old "var periodMap = { ... };" block.
 
-// 2. Update the row processing logic inside the loop to look exactly like this:
-var displayPeriod = columns[1] ? columns[1].trim() : ""; // Cleans up the spreadsheet value (e.g., "3B")
+// 2. Paste this exact code right inside the rows loop:
+var displayPeriod = columns[1] ? columns[1].trim() : ""; 
 var eventText = columns[2] ? columns[2].replace(/\\n/g, '\n') : "";
 
-// Map the spreadsheet value DIRECTLY to your exact HTML dropdown option values
+// Direct connection to your HTML dropdown menu values
 var internalPeriodKey = "";
 if (displayPeriod === "2") {
-    internalPeriodKey = "period1";  // Points to your Period 2 dropdown option
-} else if (displayPeriod === "3B") {
-    internalPeriodKey = "period2";  // Points to your Period 3B dropdown option
+    internalPeriodKey = "period1";  // Connects row "2" to your Period 2 option
+} else if (displayPeriod === "3B" || displayPeriod === "3b") {
+    internalPeriodKey = "period2";  // Connects row "3B" directly to your Period 3B option
 } else if (displayPeriod === "4") {
-    internalPeriodKey = "period3";  // Points to your Period 4 dropdown option
+    internalPeriodKey = "period3";  // Connects row "4" to your Period 4 option
 }
                     }
                 }
