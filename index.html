@@ -217,8 +217,14 @@
                 let columns = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                 if (columns.length >= 3) {
                     var dateStr = columns[0].trim();
-                    var periodKey = columns[1].trim(); // Directly reads whatever is in the sheet
+                    var rawPeriod = columns[1].trim(); // Reads "2", "3B", or "4" from sheet
                     var eventText = columns[2] ? columns[2].replace(/^"|"/g, '').replace(/\\n/g, '\n').trim() : "";
+
+                    // Translate spreadsheet values to match your HTML dropdown values exactly
+                    var periodKey = rawPeriod; 
+                    if (rawPeriod === "2")  periodKey = "period1";
+                    if (rawPeriod === "3B") periodKey = "period2";
+                    if (rawPeriod === "4")  periodKey = "period3";
 
                     if (dateStr && periodKey) {
                         if (!events[dateStr]) {
