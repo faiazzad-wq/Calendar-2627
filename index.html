@@ -177,17 +177,17 @@
     var CSV_URL = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID + '/gviz/tq?tqx=out:csv';
 
    // Corrected map to align your spreadsheet numbers to your calendar options
-    var periodMap = {
-        // Spreadsheet "2" or "Period 2" goes to your first dropdown option (value="period1")
+   var periodMap = {
+        // Maps spreadsheet "2" to your first dropdown option (Period 2)
         "2": "period1",
         "Period 2": "period1",
         
-        // Spreadsheet "3" or "3B" or "Period 3B" goes to your second dropdown option (value="period2")
+        // Maps spreadsheet "3B" to your second dropdown option (Period 3B)
         "3": "period2",
         "3B": "period2",
         "Period 3B": "period2",
         
-        // Spreadsheet "4" or "Period 4" goes to your third dropdown option (value="period3")
+        // Maps spreadsheet "4" to your third dropdown option (Period 4)
         "4": "period3",
         "Period 4": "period3"
     };
