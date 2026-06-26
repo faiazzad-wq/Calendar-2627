@@ -218,15 +218,21 @@
                         columns[j] = columns[j].replace(/^"|"$/g, '').trim();
                     }
                     
-                    if (columns.length >= 3) {
-                        var dateKey = columns[0];   // e.g. "2026-09-08"
-                        var displayPeriod = columns[1]; // e.g. "2" or "3B" or "4"
-                        var eventText = columns[2].replace(/\\n/g, '\n'); // parse virtual lines back to breaks
-                        
-                        var internalPeriodKey = periodMap[displayPeriod];
-                        if (internalPeriodKey && dateKey) {
-                            currentData[internalPeriodKey][dateKey] = eventText;
-                        }
+                    // 1. Clear out your old periodMap dictionary entirely if it's there.
+
+// 2. Update the row processing logic inside the loop to look exactly like this:
+var displayPeriod = columns[1] ? columns[1].trim() : ""; // Cleans up the spreadsheet value (e.g., "3B")
+var eventText = columns[2] ? columns[2].replace(/\\n/g, '\n') : "";
+
+// Map the spreadsheet value DIRECTLY to your exact HTML dropdown option values
+var internalPeriodKey = "";
+if (displayPeriod === "2") {
+    internalPeriodKey = "period1";  // Points to your Period 2 dropdown option
+} else if (displayPeriod === "3B") {
+    internalPeriodKey = "period2";  // Points to your Period 3B dropdown option
+} else if (displayPeriod === "4") {
+    internalPeriodKey = "period3";  // Points to your Period 4 dropdown option
+}
                     }
                 }
                 renderCalendar();
