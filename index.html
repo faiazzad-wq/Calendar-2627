@@ -208,7 +208,7 @@
         .then(data => {
             if (!data) return;
             
-            let rows = data.split('\n').slice(1); // Skip header row
+            let rows = data.split(/\r?\n/).slice(1); // Handles Windows/Mac line endings safely
             events = {}; // Reset events object
 
             rows.forEach(row => {
@@ -216,26 +216,39 @@
 
                 let columns = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                 if (columns.length >= 3) {
-                    var dateStr = columns[0].trim();
-                    var rawPeriod = columns[1].trim(); // Reads "2", "3B", or "4" from sheet
+                    var rawDate = columns[0].trim().replace(/^"|"/g, '');
+                    var rawPeriod = columns[1].trim().toUpperCase().replace(/^"|"/g, '');
                     var eventText = columns[2] ? columns[2].replace(/^"|"/g, '').replace(/\\n/g, '\n').trim() : "";
 
-                    // Translate spreadsheet values to match your HTML dropdown values exactly
-                    var periodKey = rawPeriod; 
-                    if (rawPeriod === "2")  periodKey = "period1";
-                    if (rawPeriod === "3B") periodKey = "period2";
-                    if (rawPeriod === "4")  periodKey = "period3";
+                    if (!rawDate) return;
 
-                    if (dateStr && periodKey) {
-                        if (!events[dateStr]) {
-                            events[dateStr] = {};
-                        }
-                        events[dateStr][periodKey] = eventText;
+                    // 1. Create alternative date format without leading zeros (e.g., "2026-9-8")
+                    var altDate = rawDate;
+                    var dateParts = rawDate.split('-');
+                    if (dateParts.length === 3) {
+                        altDate = dateParts[0] + "-" + parseInt(dateParts[1], 10) + "-" + parseInt(dateParts[2], 10);
                     }
+
+                    // 2. Determine alternative period keys
+                    var altPeriod = rawPeriod;
+                    if (rawPeriod === "2")  altPeriod = "PERIOD1";
+                    if (rawPeriod === "3B") altPeriod = "PERIOD2";
+                    if (rawPeriod === "4")  altPeriod = "PERIOD3";
+
+                    // 3. Save entry under ALL possible combinations so it cannot fail to match
+                    var datesToSave = [rawDate, altDate];
+                    var periodsToSave = [rawPeriod, rawPeriod.toLowerCase(), altPeriod, altPeriod.toLowerCase()];
+
+                    datesToSave.forEach(d => {
+                        if (!events[d]) events[d] = {};
+                        periodsToSave.forEach(p => {
+                            events[d][p] = eventText;
+                        });
+                    });
                 }
             });
 
-            // Draw the calendar cells
+            // Redraw the calendar grid with the heavily mapped data
             generateCalendar(currentMonth, currentYear);
         })
         .catch(error => {
