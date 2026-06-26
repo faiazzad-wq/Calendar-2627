@@ -208,45 +208,31 @@ function loadEventsFromGoogleSheet() {
         .then(data => {
             if (!data) return;
             
-            let rows = data.split(/\r?\n/).slice(1); // Handle Windows/Mac line breaks safely
-            events = {}; // Reset global events object
-
-            // Get all options from your HTML dropdown menu dynamically
-            var periodSelect = document.getElementById('periodSelect');
-            var selectOptions = [];
-            if (periodSelect) {
-                selectOptions = Array.from(periodSelect.options).map(opt => ({
-                    value: opt.value,
-                    text: opt.text.trim().toUpperCase()
-                }));
-            }
+            let rows = data.split('\n').slice(1); // Skip header row
+            events = {}; // Reset events object
 
             rows.forEach(row => {
                 if (!row.trim()) return;
 
-                // Split by commas while safely respecting quotes around text entries
                 let columns = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                 if (columns.length >= 3) {
-                    var dateStr = columns[0].trim().replace(/^"|"/g, '');
-                    var rawPeriod = columns[1] ? columns[1].trim().toUpperCase().replace(/^"|"/g, '') : "";
+                    var dateStr = columns[0].trim();
+                    
+                    // FIX: This must match what your spreadsheet actually writes ("2", "3B", "4")
+                    var displayPeriod = columns[1].trim(); 
                     var eventText = columns[2] ? columns[2].replace(/^"|"/g, '').replace(/\\n/g, '\n').trim() : "";
 
+                    // Map the spreadsheet values directly to your template's internal filter IDs
                     var periodKey = "";
-
-                    // Match sheet text directly against your actual dropdown options
-                    if (rawPeriod === "2" || rawPeriod === "PERIOD 2") {
-                        var found = selectOptions.find(o => o.text.includes("2"));
-                        periodKey = found ? found.value : "period1";
-                    } else if (rawPeriod === "3B" || rawPeriod === "PERIOD 3B" || rawPeriod === "3") {
-                        var found = selectOptions.find(o => o.text.includes("3B") || o.text.includes("3"));
-                        periodKey = found ? found.value : "period2";
-                    } else if (rawPeriod === "4" || rawPeriod === "PERIOD 4") {
-                        var found = selectOptions.find(o => o.text.includes("4"));
-                        periodKey = found ? found.value : "period3";
-                    } else {
-                        periodKey = rawPeriod.toLowerCase();
+                    if (displayPeriod === "2") {
+                        periodKey = "period1";
+                    } else if (displayPeriod === "3B") {
+                        periodKey = "period2";
+                    } else if (displayPeriod === "4") {
+                        periodKey = "period3";
                     }
 
+                    // Save the data using the exact variable name the calendar relies on
                     if (dateStr && periodKey) {
                         if (!events[dateStr]) {
                             events[dateStr] = {};
@@ -256,7 +242,7 @@ function loadEventsFromGoogleSheet() {
                 }
             });
 
-            // Re-render the calendar view once data is completely loaded
+            // Draw the calendar cells with the newly matched data
             generateCalendar(currentMonth, currentYear);
         })
         .catch(error => {
