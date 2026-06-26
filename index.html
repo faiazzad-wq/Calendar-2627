@@ -178,12 +178,12 @@
 
    // Corrected map to align your spreadsheet numbers to your calendar options
     var periodMap = {
-        "2": "period1",        // Spreadsheet '2' goes to the first option (Period 2)
+        "2": "period1",
         "Period 2": "period1",
-        "3": "period2",        // Spreadsheet '3' now correctly goes to the second option (Period 3B)
-        "3B": "period2",
+        "3": "period2",
+        "3B": "period2",        // <-- This line tells the code that spreadsheet "3B" = dropdown "period2"
         "Period 3B": "period2",
-        "4": "period3",        // Spreadsheet '4' goes to the third option (Period 4)
+        "4": "period3",
         "Period 4": "period3"
     };
 
