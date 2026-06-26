@@ -206,48 +206,30 @@
     fetch(sheetUrl)
         .then(response => response.text())
         .then(data => {
-            if (!data) {
-                generateCalendar(currentMonth, currentYear);
-                return;
-            }
-
-            // Split lines safely supporting both Windows and Unix endings
-            let rows = data.split(/\r?\n/).slice(1); 
-            events = {}; // Wipe old data clean
+            if (!data) return;
+            
+            let rows = data.split('\n').slice(1); // Skip header row
+            events = {}; // Reset events object
 
             rows.forEach(row => {
                 if (!row.trim()) return;
 
-                // Robust split that handles quotes and commas
                 let columns = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                
                 if (columns.length >= 3) {
-                    // Clean up hidden spaces or residual quotes
-                    var dateStr = columns[0].trim().replace(/^"|"/g, '');
-                    var displayPeriod = columns[1] ? columns[1].trim().toUpperCase().replace(/^"|"/g, '') : "";
+                    var dateStr = columns[0].trim();
+                    var periodKey = columns[1].trim(); // Directly reads whatever is in the sheet
                     var eventText = columns[2] ? columns[2].replace(/^"|"/g, '').replace(/\\n/g, '\n').trim() : "";
 
-                    // Map spreadsheet text directly to your HTML select menu values
-                    var internalPeriodKey = "";
-                    if (displayPeriod === "2" || displayPeriod === "PERIOD 2") {
-                        internalPeriodKey = "period1";
-                    } else if (displayPeriod === "3B" || displayPeriod === "PERIOD 3B" || displayPeriod === "3") {
-                        internalPeriodKey = "period2";
-                    } else if (displayPeriod === "4" || displayPeriod === "PERIOD 4") {
-                        internalPeriodKey = "period3";
-                    }
-
-                    // Save the data structure
-                    if (internalPeriodKey && dateStr) {
+                    if (dateStr && periodKey) {
                         if (!events[dateStr]) {
                             events[dateStr] = {};
                         }
-                        events[dateStr][internalPeriodKey] = eventText;
+                        events[dateStr][periodKey] = eventText;
                     }
                 }
             });
 
-            // Re-render the calendar grid layout on screen with the new data loaded
+            // Draw the calendar cells
             generateCalendar(currentMonth, currentYear);
         })
         .catch(error => {
@@ -255,6 +237,11 @@
             generateCalendar(currentMonth, currentYear);
         });
 }
+
+window.onload = function() {
+    generateCalendar(currentMonth, currentYear);
+    loadEventsFromGoogleSheet();
+};
 
 // Make sure your initial page load layout triggers both functions sequence-correctly
 window.onload = function() {
