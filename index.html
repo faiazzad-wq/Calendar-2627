@@ -108,7 +108,7 @@
 
     // 3. Google Sheets Live Data Connector
     function loadEventsFromGoogleSheet() {
-        const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1nO7Z8-25ZzQyOQ-5h2Y6h8vY_q2tT8C-9yO8k_Y8N8x9L6u_Z3_M6pB-B7V8X/pub?output=csv&cachebust=' + new Date().getTime();
+        const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQWlW91h2aX_s2ZnA7TK8UxhkmjfGAKE3S-oL316L8PKzD7oBxHJmTdJMZOadpEwOr1o_A0AhxXuFNU/pub?gid=0&single=true&output=csv&cachebust=' + new Date().getTime();
 
         fetch(sheetUrl)
             .then(response => response.text())
