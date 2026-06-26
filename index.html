@@ -211,20 +211,22 @@
                 return;
             }
 
-            let rows = data.split('\n').slice(1); // Skips the header row
-            events = {}; // Reset the global events dictionary
+            // Split rows and filter out empty lines
+            let rows = data.split(/\r?\n/).slice(1); 
+            events = {}; 
 
             rows.forEach(row => {
                 if (!row.trim()) return;
 
-                // Split by commas while safely respecting quotes around text entries
-                let columns = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                // Robust split that handles both commas and semicolons safely
+                let columns = row.split(/[,;](?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                
                 if (columns.length >= 3) {
-                    var dateStr = columns[0].trim();
-                    var displayPeriod = columns[1] ? columns[1].trim().toUpperCase() : "";
+                    var dateStr = columns[0].trim().replace(/^"|"/g, '');
+                    var displayPeriod = columns[1] ? columns[1].trim().toUpperCase().replace(/^"|"/g, '') : "";
                     var eventText = columns[2] ? columns[2].replace(/^"|"/g, '').replace(/\\n/g, '\n').trim() : "";
 
-                    // Safe conversion mapping that bypasses loose dictionaries
+                    // Cross-wired mapping fallback to ensure compatibility
                     var internalPeriodKey = "";
                     if (displayPeriod === "2" || displayPeriod === "PERIOD 2") {
                         internalPeriodKey = "period1";
@@ -234,7 +236,6 @@
                         internalPeriodKey = "period3";
                     }
 
-                    // Securely assign the event data
                     if (internalPeriodKey && dateStr) {
                         if (!events[dateStr]) {
                             events[dateStr] = {};
@@ -244,17 +245,15 @@
                 }
             });
 
-            // Re-render the grid layouts now that processing is 100% finished
+            // Force draw the calendar items
             generateCalendar(currentMonth, currentYear);
         })
         .catch(error => {
             console.error('Error loading Google Sheet data:', error);
-            // Fallback: renders the structural calendar grid even if the network request fails
             generateCalendar(currentMonth, currentYear);
         });
 }
 
-// Make sure the calendar layout initiates when page loading finishes
 window.onload = function() {
     generateCalendar(currentMonth, currentYear);
     loadEventsFromGoogleSheet();
