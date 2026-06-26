@@ -1,399 +1,146 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-Period Class Calendar</title>
+    <title>Calendrier Scolaire</title>
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            background-color: #f8f9fa; 
-            margin: 0; 
-            padding: 20px; 
-        }
-        .calendar-container { 
-            max-width: 800px; 
-            margin: 0 auto; 
-            background: white; 
-            padding: 20px; 
-            border: 1px solid #ccc;
-            border-radius: 8px;
-        }
-        .top-bar { 
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #eee;
-        }
-        .top-bar select { 
-            padding: 5px; 
-            font-size: 16px; 
-        }
-        .admin-toggle {
-            float: right;
-            display: none; /* Hidden since adding/saving is now done directly in Google Sheets */
-        }
-        .header { 
-            text-align: center;
-            margin-bottom: 20px; 
-        }
-        .header h2 { 
-            display: inline-block; 
-            width: 250px; 
-            margin: 0 10px;
-            vertical-align: middle;
-        }
-        .header button { 
-            padding: 5px 15px; 
-            font-size: 16px; 
-            cursor: pointer;
-        }
-        
-        table.calendar-table {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-        }
-        table.calendar-table th {
-            background-color: #4a6fa5;
-            color: white;
-            padding: 10px 0;
-            text-align: center;
-            font-weight: bold;
-        }
-        table.calendar-table td {
-            height: 90px;
-            border: 1px solid #ddd;
-            vertical-align: top;
-            padding: 6px;
-            cursor: pointer;
-            position: relative;
-            background-color: #fff;
-        }
-        table.calendar-table td:hover {
-            background-color: #edf2f7;
-        }
-        table.calendar-table td.empty {
-            background-color: #f1f5f9;
-            cursor: default;
-        }
-        .date-num {
-            font-weight: bold;
-            color: #2c3e50;
-        }
-        .has-work { 
-            width: 12px; 
-            height: 12px; 
-            background-color: #2ecc71; 
-            border-radius: 50%; 
-            position: absolute; 
-            bottom: 8px; 
-            right: 8px; 
-        }
-        
-        .modal { 
-            display: none; 
-            position: fixed; 
-            top: 0; left: 0; 
-            width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.5); 
-            justify-content: center; 
-            align-items: center; 
-            z-index: 100; 
-        }
-        .modal-content { 
-            background: white; 
-            padding: 25px; 
-            border-radius: 8px; 
-            width: 90%; 
-            max-width: 500px; 
-        }
-        .modal h3 { margin-top: 0; }
-        .period-indicator { color: #e67e22; font-weight: bold; margin-bottom: 10px;}
-        .modal textarea { 
-            width: 100%; 
-            height: 150px; 
-            margin-top: 10px; 
-            padding: 10px; 
-            box-sizing: border-box; 
-        }
-        .modal-buttons { 
-            text-align: right; 
-            margin-top: 15px; 
-        }
-        .btn { padding: 8px 16px; border: none; cursor: pointer; font-weight: bold; margin-left: 5px;}
-        .btn-save { background: #2ecc71; color: white; }
-        .btn-close { background: #95a5a6; color: white; }
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; margin: 0; padding: 20px; }
+        .calendar-container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .controls { display: flex; gap: 10px; }
+        select, button { padding: 8px 12px; font-size: 16px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; }
+        button { background-color: #007bff; color: white; border: none; }
+        button:hover { background-color: #0056b3; }
+        .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+        .day-name { font-weight: bold; text-align: center; background: #e2e2e2; padding: 10px; border-radius: 4px; }
+        .day { background: #fff; border: 1px solid #ddd; min-height: 100px; padding: 5px; border-radius: 4px; position: relative; }
+        .day.empty { background: #f9f9f9; border: none; }
+        .day-number { font-weight: bold; margin-bottom: 5px; }
+        .event { background: #e1f5fe; color: #0288d1; padding: 4px; border-radius: 4px; font-size: 12px; margin-top: 4px; white-space: pre-wrap; }
     </style>
 </head>
 <body>
 
 <div class="calendar-container">
-    <div class="top-bar">
-        <label for="periodSelect"><b>Select Class:</b> </label>
-        <select id="periodSelect" onchange="changePeriod()">
-            <option value="period1">Period 2</option>
-            <option value="period2">Period 3B</option>
-            <option value="period3">Period 4</option>
-        </select>
-        
-        <div class="admin-toggle">
-            <label><input type="checkbox" id="teacherMode" onchange="toggleMode()"> Teacher Editing Mode</label>
-        </div>
-    </div>
-    
     <div class="header">
-        <button onclick="changeMonth(-1)">&lt; Previous</button>
-        <h2 id="monthYear">Class Calendar</h2>
-        <button onclick="changeMonth(1)">Next &gt;</button>
-    </div>
-
-    <table class="calendar-table">
-        <thead>
-            <tr>
-                <th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th>
-            </tr>
-        </thead>
-        <tbody id="calendarBody">
-        </tbody>
-    </table>
-</div>
-
-<div class="modal" id="workModal">
-    <div class="modal-content">
-        <h3 id="modalDateTitle">Date</h3>
-        <div class="period-indicator" id="modalPeriodTitle">Period</div>
-        <p id="viewWorkText" style="display:none; white-space: pre-wrap; line-height: 1.5;"></p>
-        <textarea id="editWorkText" style="display:none;" placeholder="Type assignments here..."></textarea>
-        <div class="modal-buttons">
-            <button class="btn btn-save" id="saveBtn" style="display:none;" onclick="saveWork()">Save Log</button>
-            <button class="btn btn-close" onclick="closeModal()">Close</button>
+        <h2 id="monthYearDisplay"></h2>
+        <div class="controls">
+            <select id="periodSelect" onchange="updateCalendar()">
+                <option value="period1">Période 2</option>
+                <option value="period2">Période 3B</option>
+                <option value="period3">Période 4</option>
+            </select>
+            <button onclick="prevMonth()">Précédent</button>
+            <button onclick="nextMonth()">Suivant</button>
         </div>
     </div>
+
+    <div class="grid" id="calendarGrid"></div>
 </div>
 
 <script>
-    // Configuration details for Google Sheet integration
-    var SPREADSHEET_ID = '1pyS_GsSr1d0f6CC3di2hlpbtWswwECPitqaYln30jOM';
-    var CSV_URL = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID + '/gviz/tq?tqx=out:csv';
+    let currentMonth = 8; // Septembre
+    let currentYear = 2026;
+    let events = {};
 
-   // Corrected map to align your spreadsheet numbers to your calendar options
-   var periodMap = {
-        // Maps spreadsheet "2" to your first dropdown option (Period 2)
-        "2": "period1",
-        "Period 2": "period1",
+    const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+
+    function generateCalendar(month, year) {
+        const grid = document.getElementById('calendarGrid');
+        const display = document.getElementById('monthYearDisplay');
+        const selectedPeriod = document.getElementById('periodSelect').value;
         
-        // Maps spreadsheet "3B" to your second dropdown option (Period 3B)
-        "3": "period2",
-        "3B": "period2",
-        "Period 3B": "period2",
-        
-        // Maps spreadsheet "4" to your third dropdown option (Period 4)
-        "4": "period3",
-        "Period 4": "period3"
-    };
+        grid.innerHTML = '';
+        display.innerText = `${monthNames[month]} ${year}`;
 
-    var currentData = { period1: {}, period2: {}, period3: {} };
-    var currentDate = new Date();
-    var selectedDateStr = "";
-    var selectedPeriod = "period1";
-    var isTeacher = false;
-    var months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-
-    // Fetch and parse data from Google Sheet CSV output
-function loadEventsFromGoogleSheet() {
-    const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1nO7Z8-25ZzQyOQ-5h2Y6h8vY_q2tT8C-9yO8k_Y8N8x9L6u_Z3_M6pB-B7V8X/pub?output=csv';
-
-    fetch(sheetUrl)
-        .then(response => response.text())
-        .then(data => {
-            if (!data) return;
-            
-            let rows = data.split('\n').slice(1); // Skip header row
-            events = {}; // Reset events object
-
-            rows.forEach(row => {
-                if (!row.trim()) return;
-
-                let columns = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                if (columns.length >= 3) {
-                    var dateStr = columns[0].trim();
-                    
-                    // FIX: This must match what your spreadsheet actually writes ("2", "3B", "4")
-                    var displayPeriod = columns[1].trim(); 
-                    var eventText = columns[2] ? columns[2].replace(/^"|"/g, '').replace(/\\n/g, '\n').trim() : "";
-
-                    // Map the spreadsheet values directly to your template's internal filter IDs
-                    var periodKey = "";
-                    if (displayPeriod === "2") {
-                        periodKey = "period1";
-                    } else if (displayPeriod === "3B") {
-                        periodKey = "period2";
-                    } else if (displayPeriod === "4") {
-                        periodKey = "period3";
-                    }
-
-                    // Save the data using the exact variable name the calendar relies on
-                    if (dateStr && periodKey) {
-                        if (!events[dateStr]) {
-                            events[dateStr] = {};
-                        }
-                        events[dateStr][periodKey] = eventText;
-                    }
-                }
-            });
-
-            // Draw the calendar cells with the newly matched data
-            generateCalendar(currentMonth, currentYear);
-        })
-        .catch(error => {
-            console.error('Error loading Google Sheet data:', error);
-            generateCalendar(currentMonth, currentYear);
+        const dayNames = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+        dayNames.forEach(name => {
+            let div = document.createElement('div');
+            div.className = 'day-name';
+            div.innerText = name;
+            grid.appendChild(div);
         });
-}
 
-window.onload = function() {
-    generateCalendar(currentMonth, currentYear);
-    loadEventsFromGoogleSheet();
-};
+        let firstDay = new Date(year, month, 1).getDay();
+        let daysInMonth = new Date(year, month + 1, 0).getDate();
 
-// Make sure your initial page load layout triggers both functions sequence-correctly
-window.onload = function() {
-    loadEventsFromGoogleSheet();
-};
-    function toggleMode() {
-        isTeacher = document.getElementById('teacherMode').checked;
-        if(isTeacher) {
-            var password = prompt("Enter Teacher Password to edit:");
-            if(password !== "admin123") {
-                alert("Incorrect password!");
-                document.getElementById('teacherMode').checked = false;
-                isTeacher = false;
-            }
+        for (let i = 0; i < firstDay; i++) {
+            let div = document.createElement('div');
+            div.className = 'day empty';
+            grid.appendChild(div);
         }
-        renderCalendar();
-    }
 
-    function changePeriod() {
-        selectedPeriod = document.getElementById('periodSelect').value;
-        renderCalendar();
-    }
-
-    function changeMonth(direction) {
-        currentDate.setMonth(currentDate.getMonth() + direction);
-        renderCalendar();
-    }
-
-    function renderCalendar() {
-        var year = currentDate.getFullYear();
-        var month = currentDate.getMonth();
-        
-        document.getElementById('monthYear').innerHTML = months[month] + " " + year;
-        
-        var firstDayIndex = new Date(year, month, 1).getDay();
-        var lastDay = new Date(year, month + 1, 0).getDate();
-        
-        var tbody = document.getElementById('calendarBody');
-        if(!tbody) return;
-        tbody.innerHTML = "";
-
-        var dayCounter = 1;
-        
-        for (var row = 0; row < 6; row++) {
-            if (dayCounter > lastDay) break;
+        for (let day = 1; day <= daysInMonth; day++) {
+            let div = document.createElement('div');
+            div.className = 'day';
             
-            var tr = document.createElement('tr');
-            
-            for (var col = 0; col < 7; col++) {
-                var td = document.createElement('td');
-                
-                if (row === 0 && col < firstDayIndex) {
-                    td.className = "empty";
-                } else if (dayCounter > lastDay) {
-                    td.className = "empty";
-                } else {
-                    td.innerHTML = '<span class="date-num">' + dayCounter + '</span>';
+            let numDiv = document.createElement('div');
+            numDiv.className = 'day-number';
+            numDiv.innerText = day;
+            div.appendChild(numDiv);
+
+            // Match formatted date keys
+            let meshMonth = String(month + 1).padStart(2, '0');
+            let meshDay = String(day).padStart(2, '0');
+            let dateKey = `${year}-${meshMonth}-${meshDay}`;
+
+            if (events[dateKey] && events[dateKey][selectedPeriod]) {
+                let eventDiv = document.createElement('div');
+                eventDiv.className = 'event';
+                eventDiv.innerText = events[dateKey][selectedPeriod];
+                div.appendChild(eventDiv);
+            }
+
+            grid.appendChild(div);
+        }
+    }
+
+    function loadEventsFromGoogleSheet() {
+        const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1nO7Z8-25ZzQyOQ-5h2Y6h8vY_q2tT8C-9yO8k_Y8N8x9L6u_Z3_M6pB-B7V8X/pub?output=csv';
+
+        fetch(sheetUrl)
+            .then(response => response.text())
+            .then(data => {
+                if (!data) return;
+                let rows = data.split(/\r?\n/).slice(1);
+                events = {};
+
+                rows.forEach(row => {
+                    if (!row.trim()) return;
+                    let columns = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                     
-                    var mStr = String(month + 1); if(mStr.length < 2) mStr = "0" + mStr;
-                    var dStr = String(dayCounter); if(dStr.length < 2) dStr = "0" + dStr;
-                    var fullDateStr = year + "-" + mStr + "-" + dStr;
-                    
-                    if (currentData[selectedPeriod] && currentData[selectedPeriod][fullDateStr]) {
-                        var dot = document.createElement('div');
-                        dot.className = "has-work";
-                        td.appendChild(dot);
+                    if (columns.length >= 3) {
+                        let dateStr = columns[0].trim().replace(/^"|"/g, '');
+                        let rawPeriod = columns[1].trim().toUpperCase().replace(/^"|"/g, '');
+                        let eventText = columns[2] ? columns[2].replace(/^"|"/g, '').replace(/\\n/g, '\n').trim() : "";
+
+                        // Maps sheet descriptions cleanly to your option values
+                        let periodKey = "";
+                        if (rawPeriod === "2") periodKey = "period1";
+                        if (rawPeriod === "3B") periodKey = "period2";
+                        if (rawPeriod === "4") periodKey = "period3";
+
+                        if (dateStr && periodKey) {
+                            if (!events[dateStr]) events[dateStr] = {};
+                            events[dateStr][periodKey] = eventText;
+                        }
                     }
-                    
-                    (function(dStrCode) {
-                        td.onclick = function() { openModal(dStrCode); };
-                    })(fullDateStr);
-                    
-                    dayCounter++;
-                }
-                tr.appendChild(td);
-            }
-            tbody.appendChild(tr);
-        }
+                });
+                generateCalendar(currentMonth, currentYear);
+            })
+            .catch(error => {
+                console.error(error);
+                generateCalendar(currentMonth, currentYear);
+            });
     }
 
-    function openModal(dateStr) {
-        selectedDateStr = dateStr;
-        var parts = dateStr.split('-');
-        var displayDate = months[parseInt(parts[1], 10) - 1] + " " + parseInt(parts[2], 10) + ", " + parts[0];
-        
-        document.getElementById('modalDateTitle').innerHTML = displayDate;
-        var selectElement = document.getElementById('periodSelect');
-        document.getElementById('modalPeriodTitle').innerHTML = selectElement.options[selectElement.selectedIndex].text;        
-        
-        var savedText = "";
-        if(currentData[selectedPeriod] && currentData[selectedPeriod][dateStr]) {
-            savedText = currentData[selectedPeriod][dateStr];
-        }
-        
-        if (isTeacher) {
-            document.getElementById('editWorkText').style.display = "block";
-            document.getElementById('saveBtn').style.display = "inline-block";
-            document.getElementById('viewWorkText').style.display = "none";
-            document.getElementById('editWorkText').value = savedText;
-        } else {
-            document.getElementById('editWorkText').style.display = "none";
-            document.getElementById('saveBtn').style.display = "none";
-            document.getElementById('viewWorkText').style.display = "block";
-            
-            if (savedText && savedText !== "No work logged for this period today.") {
-                var lines = savedText.split('\n');
-                var bulletList = '<ul style="margin: 0; padding-left: 20px; text-align: left;">';
-                var hasContent = false;
-                
-                for (var l = 0; l < lines.length; l++) {
-                    if (lines[l].replace(/^\s+|\s+$/g, '') !== "") {
-                        bulletList += '<li style="margin-bottom: 5px;">' + lines[l] + '</li>';
-                        hasContent = true;
-                    }
-                }
-                bulletList += '</ul>';
-                
-                document.getElementById('viewWorkText').innerHTML = hasContent ? bulletList : "No work logged for this period today.";
-            } else {
-                document.getElementById('viewWorkText').innerHTML = "No work logged for this period today.";
-            }
-        }
-        
-        document.getElementById('workModal').style.display = "flex";
-    }
+    function updateCalendar() { generateCalendar(currentMonth, currentYear); }
+    function prevMonth() { currentMonth--; if(currentMonth < 0) { currentMonth = 11; currentYear--; } updateCalendar(); }
+    function nextMonth() { currentMonth++; if(currentMonth > 11) { currentMonth = 0; currentYear++; } updateCalendar(); }
 
-    function closeModal() {
-        document.getElementById('workModal').style.display = "none";
-    }
-
-    function saveWork() {
-        // Disabled local client writing since data updates are managed on the cloud source spreadsheet
-        closeModal();
-    }
-
-    // Initialize data setup from sheet
-    setTimeout(function() {
-        loadEventsFromGoogleSheet();
-    }, 100);
+    window.onload = function() { loadEventsFromGoogleSheet(); };
 </script>
+
 </body>
 </html>
