@@ -201,47 +201,46 @@
 
     // Fetch and parse data from Google Sheet CSV output
     function loadEventsFromGoogleSheet() {
-        fetch(CSV_URL)
-            .then(function(response) { return response.text(); })
-            .then(function(data) {
-                var lines = data.split('\n');
-                // Clear out existing object
-                currentData = { period1: {}, period2: {}, period3: {} };
-                
-                // Process lines starting at index 1 to skip header row
-                for (var i = 1; i < lines.length; i++) {
-                    if (lines[i].trim() === "") continue;
-                    
-                    // Regex splitting logic cleanly handles quoted string sequences
-                    var columns = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                    for (var j = 0; j < columns.length; j++) {
-                        columns[j] = columns[j].replace(/^"|"$/g, '').trim();
+    const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1nO7Z8-25ZzQyOQ-5h2Y6h8vY_q2tT8C-9yO8k_Y8N8x9L6u_Z3_M6pB-B7V8X/pub?output=csv'; // Keep your exact sheet CSV URL here
+
+    fetch(sheetUrl)
+        .then(response => response.text())
+        .then(data => {
+            let rows = data.split('\n').slice(1); // Skips header row
+            events = {}; // Reset events object
+
+            rows.forEach(row => {
+                let columns = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); // Properly splits CSV commas
+                if (columns.length >= 3) {
+                    var dateStr = columns[0].trim();
+                    var displayPeriod = columns[1] ? columns[1].trim() : "";
+                    var eventText = columns[2] ? columns[2].replace(/^"|"/g, '').replace(/\\n/g, '\n').trim() : "";
+
+                    // Map spreadsheet text directly to your HTML dropdown menu values
+                    var internalPeriodKey = "";
+                    if (displayPeriod === "2") {
+                        internalPeriodKey = "period1";
+                    } else if (displayPeriod === "3B" || displayPeriod === "3b") {
+                        internalPeriodKey = "period2";
+                    } else if (displayPeriod === "4") {
+                        internalPeriodKey = "period3";
                     }
-                    
-                   // 1. Completely delete the old "var periodMap = { ... };" block.
 
-// 2. Paste this exact code right inside the rows loop:
-var displayPeriod = columns[1] ? columns[1].trim() : ""; 
-var eventText = columns[2] ? columns[2].replace(/\\n/g, '\n') : "";
-
-// Direct connection to your HTML dropdown menu values
-var internalPeriodKey = "";
-if (displayPeriod === "2") {
-    internalPeriodKey = "period1";  // Connects row "2" to your Period 2 option
-} else if (displayPeriod === "3B" || displayPeriod === "3b") {
-    internalPeriodKey = "period2";  // Connects row "3B" directly to your Period 3B option
-} else if (displayPeriod === "4") {
-    internalPeriodKey = "period3";  // Connects row "4" to your Period 4 option
-}
+                    // Store event if it matches a valid period
+                    if (internalPeriodKey && dateStr) {
+                        if (!events[dateStr]) {
+                            events[dateStr] = {};
+                        }
+                        events[dateStr][internalPeriodKey] = eventText;
                     }
                 }
-                renderCalendar();
-            })
-            .catch(function(error) {
-                console.error("Error loading calendar items:", error);
-                renderCalendar();
             });
-    }
+
+            // Re-render the calendar view once data is completely loaded
+            generateCalendar(currentMonth, currentYear);
+        })
+        .catch(error => console.error('Error loading Google Sheet data:', error));
+}
 
     function toggleMode() {
         isTeacher = document.getElementById('teacherMode').checked;
