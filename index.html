@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Period Class Calendar</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background-color: #f8f9fa; 
+            margin: 0; 
+            padding: 20px; 
+        }
+        .calendar-container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        .top-bar { 
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .top-bar select { 
+            padding: 5px; 
+            font-size: 16px; 
+        }
+        .admin-toggle {
+            float: right;
+        }
+        .header { 
+            text-align: center;
+            margin-bottom: 20px; 
+        }
+        .header h2 { 
+            display: inline-block; 
+            width: 250px; 
+            margin: 0 10px;
+            vertical-align: middle;
+        }
+        .header button { 
+            padding: 5px 15px; 
+            font-size: 16px; 
+            cursor: pointer;
+        }
+        
+        /* Using a traditional, bulletproof HTML Table instead of CSS Grid */
+        table.calendar-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        table.calendar-table th {
+            background-color: #4a6fa5;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+            font-weight: bold;
+        }
+        table.calendar-table td {
+            height: 90px;
+            border: 1px solid #ddd;
+            vertical-align: top;
+            padding: 6px;
+            cursor: pointer;
+            position: relative;
+            background-color: #fff;
+        }
+        table.calendar-table td:hover {
+            background-color: #edf2f7;
+        }
+        table.calendar-table td.empty {
+            background-color: #f1f5f9;
+            cursor: default;
+        }
+        .date-num {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .has-work { 
+            width: 12px; 
+            height: 12px; 
+            background-color: #2ecc71; 
+            border-radius: 50%; 
+            position: absolute; 
+            bottom: 8px; 
+            right: 8px; 
+        }
+        
+        /* Modal Popup Styles */
+        .modal { 
+            display: none; 
+            position: fixed; 
+            top: 0; left: 0; 
+            width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.5); 
+            justify-content: center; 
+            align-items: center; 
+            z-index: 100; 
+        }
+        .modal-content { 
+            background: white; 
+            padding: 25px; 
+            border-radius: 8px; 
+            width: 90%; 
+            max-width: 500px; 
+        }
+        .modal h3 { margin-top: 0; }
+        .period-indicator { color: #e67e22; font-weight: bold; margin-bottom: 10px;}
+        .modal textarea { 
+            width: 100%; 
+            height: 150px; 
+            margin-top: 10px; 
+            padding: 10px; 
+            box-sizing: border-box; 
+        }
+        .modal-buttons { 
+            text-align: right; 
+            margin-top: 15px; 
+        }
+        .btn { padding: 8px 16px; border: none; cursor: pointer; font-weight: bold; margin-left: 5px;}
+        .btn-save { background: #2ecc71; color: white; }
+        .btn-close { background: #95a5a6; color: white; }
+    </style>
+</head>
+<body>
+
+<div class="calendar-container">
+    <div class="top-bar">
+        <label for="periodSelect"><b>Select Class:</b> </label>
+        <select id="periodSelect" onchange="changePeriod()">
+            <option value="period1">Period 2</option>
+            <option value="period2">Period 3B</option>
+            <option value="period3">Period 4</option>
+        </select>
+        
+        <div class="admin-toggle">
+            <label><input type="checkbox" id="teacherMode" onchange="toggleMode()"> Teacher Editing Mode</label>
+        </div>
+    </div>
+    
+    <div class="header">
+        <button onclick="changeMonth(-1)">&lt; Previous</button>
+        <h2 id="monthYear">Class Calendar</h2>
+        <button onclick="changeMonth(1)">Next &gt;</button>
+    </div>
+
+    <table class="calendar-table">
+        <thead>
+            <tr>
+                <th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th>
+            </tr>
+        </thead>
+        <tbody id="calendarBody">
+            </tbody>
+    </table>
+</div>
+
+<div class="modal" id="workModal">
+    <div class="modal-content">
+        <h3 id="modalDateTitle">Date</h3>
+        <div class="period-indicator" id="modalPeriodTitle">Period</div>
+        <p id="viewWorkText" style="display:none; white-space: pre-wrap; line-height: 1.5;"></p>
+        <textarea id="editWorkText" style="display:none;" placeholder="Type assignments here..."></textarea>
+        <div class="modal-buttons">
+            <button class="btn btn-save" id="saveBtn" style="display:none;" onclick="saveWork()">Save Log</button>
+            <button class="btn btn-close" onclick="closeModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Universal data setup
+    var currentData = { period1: {}, period2: {}, period3: {} };
+    try {
+        var savedData = localStorage.getItem('classCalendarDataMulti');
+        if (savedData) {
+            currentData = JSON.parse(savedData);
+        }
+    } catch (e) {
+        // Fallback for strict browser cookie/privacy rules
+        currentData = { period1: {}, period2: {}, period3: {} };
+    }
+    
+    var currentDate = new Date();
+    var selectedDateStr = "";
+    var selectedPeriod = "period1";
+    var isTeacher = false;
+    var months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+    function toggleMode() {
+        isTeacher = document.getElementById('teacherMode').checked;
+        if(isTeacher) {
+            var password = prompt("Enter Teacher Password to edit:");
+            if(password !== "admin123") {
+                alert("Incorrect password!");
+                document.getElementById('teacherMode').checked = false;
+                isTeacher = false;
+            }
+        }
+        renderCalendar();
+    }
+
+    function changePeriod() {
+        selectedPeriod = document.getElementById('periodSelect').value;
+        renderCalendar();
+    }
+
+    function changeMonth(direction) {
+        currentDate.setMonth(currentDate.getMonth() + direction);
+        renderCalendar();
+    }
+
+    function renderCalendar() {
+        var year = currentDate.getFullYear();
+        var month = currentDate.getMonth();
+        
+        // Update Title Display
+        document.getElementById('monthYear').innerHTML = months[month] + " " + year;
+        
+        var firstDayIndex = new Date(year, month, 1).getDay();
+        var lastDay = new Date(year, month + 1, 0).getDate();
+        
+        var tbody = document.getElementById('calendarBody');
+        if(!tbody) return;
+        tbody.innerHTML = ""; // Clear existing grid Safely
+
+        var dayCounter = 1;
+        
+        // Build rows manually using standard DOM tables
+        for (var row = 0; row < 6; row++) {
+            if (dayCounter > lastDay) break; // Stop making rows if month finished
+            
+            var tr = document.createElement('tr');
+            
+            for (var col = 0; col < 7; col++) {
+                var td = document.createElement('td');
+                
+                if (row === 0 && col < firstDayIndex) {
+                    // Blank leading days
+                    td.className = "empty";
+                } else if (dayCounter > lastDay) {
+                    // Blank ending days
+                    td.className = "empty";
+                } else {
+                    // Valid Calendar Day
+                    td.innerHTML = '<span class="date-num">' + dayCounter + '</span>';
+                    
+                    // Create Date code string: YYYY-MM-DD
+                    var mStr = String(month + 1); if(mStr.length < 2) mStr = "0" + mStr;
+                    var dStr = String(dayCounter); if(dStr.length < 2) dStr = "0" + dStr;
+                    var fullDateStr = year + "-" + mStr + "-" + dStr;
+                    
+                    // Green dot check
+                    if (currentData[selectedPeriod] && currentData[selectedPeriod][fullDateStr]) {
+                        var dot = document.createElement('div');
+                        dot.className = "has-work";
+                        td.appendChild(dot);
+                    }
+                    
+                    // Scope closure explicitly to avoid index reference errors
+                    (function(dStrCode) {
+                        td.onclick = function() { openModal(dStrCode); };
+                    })(fullDateStr);
+                    
+                    dayCounter++;
+                }
+                tr.appendChild(td);
+            }
+            tbody.appendChild(tr);
+        }
+    }
+
+    function openModal(dateStr) {
+        selectedDateStr = dateStr;
+        var parts = dateStr.split('-');
+        var displayDate = months[parseInt(parts[1], 10) - 1] + " " + parseInt(parts[2], 10) + ", " + parts[0];
+        
+        document.getElementById('modalDateTitle').innerHTML = displayDate;
+	var selectElement = document.getElementById('periodSelect');
+	document.getElementById('modalPeriodTitle').innerHTML = 	selectElement.options[selectElement.selectedIndex].text;        
+        var savedText = "";
+        if(currentData[selectedPeriod] && currentData[selectedPeriod][dateStr]) {
+            savedText = currentData[selectedPeriod][dateStr];
+        }
+        
+        if (isTeacher) {
+            document.getElementById('editWorkText').style.display = "block";
+            document.getElementById('saveBtn').style.display = "inline-block";
+            document.getElementById('viewWorkText').style.display = "none";
+            document.getElementById('editWorkText').value = savedText;
+        } else {
+    document.getElementById('editWorkText').style.display = "none";
+    document.getElementById('saveBtn').style.display = "none";
+    document.getElementById('viewWorkText').style.display = "block";
+    
+    if (savedText && savedText !== "No work logged for this period today.") {
+        // Split text by lines, clean up empty lines, and wrap in bullet points
+        var lines = savedText.split('\n');
+        var bulletList = '<ul style="margin: 0; padding-left: 20px; text-align: left;">';
+        var hasContent = false;
+        
+        for (var l = 0; l < lines.length; l++) {
+            if (lines[l].replace(/^\s+|\s+$/g, '') !== "") {
+                bulletList += '<li style="margin-bottom: 5px;">' + lines[l] + '</li>';
+                hasContent = true;
+            }
+        }
+        bulletList += '</ul>';
+        
+        document.getElementById('viewWorkText').innerHTML = hasContent ? bulletList : "No work logged for this period today.";
+    } else {
+        document.getElementById('viewWorkText').innerHTML = "No work logged for this period today.";
+    }
+}
+        
+        document.getElementById('workModal').style.display = "flex";
+    }
+
+    function closeModal() {
+        document.getElementById('workModal').style.display = "none";
+    }
+
+    function saveWork() {
+        var text = document.getElementById('editWorkText').value;
+        if (!currentData[selectedPeriod]) {
+            currentData[selectedPeriod] = {};
+        }
+
+        if(text.replace(/^\s+|\s+$/g, '') === "") {
+            delete currentData[selectedPeriod][selectedDateStr];
+        } else {
+            currentData[selectedPeriod][selectedDateStr] = text;
+        }
+        
+        try {
+            localStorage.setItem('classCalendarDataMulti', JSON.stringify(currentData));
+        } catch(e) {}
+        
+        closeModal();
+        renderCalendar();
+    }
+
+    // Safest script initialization hook possible
+    setTimeout(function() {
+        renderCalendar();
+    }, 100);
+</script>
+</body>
+</html>
