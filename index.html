@@ -201,32 +201,37 @@
 
     // Fetch and parse data from Google Sheet CSV output
     function loadEventsFromGoogleSheet() {
-    const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1nO7Z8-25ZzQyOQ-5h2Y6h8vY_q2tT8C-9yO8k_Y8N8x9L6u_Z3_M6pB-B7V8X/pub?output=csv'; // Keep your exact sheet CSV URL here
+    const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1nO7Z8-25ZzQyOQ-5h2Y6h8vY_q2tT8C-9yO8k_Y8N8x9L6u_Z3_M6pB-B7V8X/pub?output=csv';
 
     fetch(sheetUrl)
         .then(response => response.text())
         .then(data => {
-            let rows = data.split('\n').slice(1); // Skips header row
-            events = {}; // Reset events object
+            if (!data) return;
+            
+            let rows = data.split('\n').slice(1); // Skip header row
+            events = {}; // Reset the main global events object
 
             rows.forEach(row => {
-                let columns = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); // Properly splits CSV commas
+                if (!row.trim()) return;
+
+                // Split by commas while safely handling quotes
+                let columns = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                 if (columns.length >= 3) {
                     var dateStr = columns[0].trim();
-                    var displayPeriod = columns[1] ? columns[1].trim() : "";
+                    var displayPeriod = columns[1] ? columns[1].trim().toUpperCase() : "";
                     var eventText = columns[2] ? columns[2].replace(/^"|"/g, '').replace(/\\n/g, '\n').trim() : "";
 
-                    // Map spreadsheet text directly to your HTML dropdown menu values
+                    // Match your exact spreadsheet values directly to your HTML dropdown select options
                     var internalPeriodKey = "";
-                    if (displayPeriod === "2") {
+                    if (displayPeriod === "2" || displayPeriod === "PERIOD 2") {
                         internalPeriodKey = "period1";
-                    } else if (displayPeriod === "3B" || displayPeriod === "3b") {
+                    } else if (displayPeriod === "3B" || displayPeriod === "PERIOD 3B" || displayPeriod === "3") {
                         internalPeriodKey = "period2";
-                    } else if (displayPeriod === "4") {
+                    } else if (displayPeriod === "4" || displayPeriod === "PERIOD 4") {
                         internalPeriodKey = "period3";
                     }
 
-                    // Store event if it matches a valid period
+                    // Save valid data into the map
                     if (internalPeriodKey && dateStr) {
                         if (!events[dateStr]) {
                             events[dateStr] = {};
@@ -236,12 +241,21 @@
                 }
             });
 
-            // Re-render the calendar view once data is completely loaded
+            // CRITICAL: Triggers the calendar grid to draw on the screen
             generateCalendar(currentMonth, currentYear);
         })
-        .catch(error => console.error('Error loading Google Sheet data:', error));
+        .catch(error => {
+            console.error('Error loading Google Sheet data:', error);
+            // Fallback: draw calendar even if spreadsheet fetch fails
+            generateCalendar(currentMonth, currentYear);
+        });
 }
 
+// Make sure your initial page load still calls the layout builder
+window.onload = function() {
+    generateCalendar(currentMonth, currentYear);
+    loadEventsFromGoogleSheet();
+};
     function toggleMode() {
         isTeacher = document.getElementById('teacherMode').checked;
         if(isTeacher) {
