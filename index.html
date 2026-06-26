@@ -40,7 +40,7 @@
 </div>
 
 <script>
-    let currentMonth = 8; // Septembre
+    let currentMonth = 8; // Default to September
     let currentYear = 2026;
     let events = {};
 
@@ -49,7 +49,12 @@
     function generateCalendar(month, year) {
         const grid = document.getElementById('calendarGrid');
         const display = document.getElementById('monthYearDisplay');
-        const selectedPeriod = document.getElementById('periodSelect').value;
+        const periodSelect = document.getElementById('periodSelect');
+        
+        // Safety check to prevent script crashes if elements aren't ready
+        if (!grid || !display || !periodSelect) return;
+        
+        const selectedPeriod = periodSelect.value;
         
         grid.innerHTML = '';
         display.innerText = `${monthNames[month]} ${year}`;
@@ -80,7 +85,7 @@
             numDiv.innerText = day;
             div.appendChild(numDiv);
 
-            // Match formatted date keys
+            // Match exact spreadsheet date string structure (YYYY-MM-DD)
             let meshMonth = String(month + 1).padStart(2, '0');
             let meshDay = String(day).padStart(2, '0');
             let dateKey = `${year}-${meshMonth}-${meshDay}`;
@@ -96,59 +101,69 @@
         }
     }
 
-function loadEventsFromGoogleSheet() {
-    const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1nO7Z8-25ZzQyOQ-5h2Y6h8vY_q2tT8C-9yO8k_Y8N8x9L6u_Z3_M6pB-B7V8X/pub?output=csv';
+    function loadEventsFromGoogleSheet() {
+        const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1nO7Z8-25ZzQyOQ-5h2Y6h8vY_q2tT8C-9yO8k_Y8N8x9L6u_Z3_M6pB-B7V8X/pub?output=csv';
 
-    fetch(sheetUrl)
-        .then(response => response.text())
-        .then(data => {
-            if (!data) return;
-            
-            // Cleanly split rows removing carriage returns (\r) completely
-            let rows = data.split(/\r?\n/).slice(1);
-            events = {}; // Reset global events map
-
-            rows.forEach(row => {
-                if (!row.trim()) return;
-
-                // Split by commas while safely ignoring quotes
-                let columns = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                if (columns.length >= 3) {
-                    let dateStr = columns[0].trim().replace(/^"|"/g, '');
-                    let rawPeriod = columns[1].trim().toUpperCase().replace(/^"|"/g, '');
-                    let eventText = columns[2] ? columns[2].replace(/^"|"/g, '').replace(/\\n/g, '\n').trim() : "";
-
-                    // Force values to align seamlessly to your option selectors
-                    let periodKey = "";
-                    if (rawPeriod === "2") {
-                        periodKey = "period1";
-                    } else if (rawPeriod === "3B" || rawPeriod === "3") {
-                        periodKey = "period2";
-                    } else if (rawPeriod === "4") {
-                        periodKey = "period3";
-                    }
-
-                    if (dateStr && periodKey) {
-                        if (!events[dateStr]) {
-                            events[dateStr] = {};
-                        }
-                        events[dateStr][periodKey] = eventText;
-                    }
+        fetch(sheetUrl)
+            .then(response => response.text())
+            .then(data => {
+                if (!data) {
+                    generateCalendar(currentMonth, currentYear);
+                    return;
                 }
+                
+                let rows = data.split(/\r?\n/).slice(1);
+                events = {};
+
+                rows.forEach(row => {
+                    if (!row.trim()) return;
+                    let columns = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    
+                    if (columns.length >= 3) {
+                        let dateStr = columns[0].trim().replace(/^"|"/g, '');
+                        let rawPeriod = columns[1].trim().toUpperCase().replace(/^"|"/g, '');
+                        let eventText = columns[2] ? columns[2].replace(/^"|"/g, '').replace(/\\n/g, '\n').trim() : "";
+
+                        // Map "2" to "period1", etc.
+                        let periodKey = "";
+                        if (rawPeriod === "2") periodKey = "period1";
+                        if (rawPeriod === "3B" || rawPeriod === "3") periodKey = "period2";
+                        if (rawPeriod === "4") periodKey = "period3";
+
+                        if (dateStr && periodKey) {
+                            if (!events[dateStr]) events[dateStr] = {};
+                            events[dateStr][periodKey] = eventText;
+                        }
+                    }
+                });
+                generateCalendar(currentMonth, currentYear);
+            })
+            .catch(error => {
+                console.error(error);
+                generateCalendar(currentMonth, currentYear);
             });
+    }
 
-            // Force update the visual calendar view
-            generateCalendar(currentMonth, currentYear);
-        })
-        .catch(error => {
-            console.error('Error fetching calendar data:', error);
-            generateCalendar(currentMonth, currentYear);
-        });
-}
+    function updateCalendar() { 
+        generateCalendar(currentMonth, currentYear); 
+    }
+    
+    function prevMonth() { 
+        currentMonth--; 
+        if (currentMonth < 0) { currentMonth = 11; currentYear--; } 
+        updateCalendar(); 
+    }
+    
+    function nextMonth() { 
+        currentMonth++; 
+        if (currentMonth > 11) { currentMonth = 0; currentYear++; } 
+        updateCalendar(); 
+    }
 
-window.onload = function() {
-    loadEventsFromGoogleSheet();
-};
+    // Single source of truth window loader to prevent render racing
+    window.onload = function() { 
+        loadEventsFromGoogleSheet(); 
+    };
 </script>
 
 </body>
