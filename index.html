@@ -40,18 +40,20 @@
 </div>
 
 <script>
-    let currentMonth = 8; // Default to September (0-indexed, so 8 = September)
+    // 1. Global State Configuration (Defined first to prevent layout crashes)
+    let currentMonth = 8; // Default to September (0-indexed: 8 = September)
     let currentYear = 2026;
     let events = {};
 
     const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 
+    // 2. Main Layout Render Function
     function generateCalendar(month, year) {
         const grid = document.getElementById('calendarGrid');
         const display = document.getElementById('monthYearDisplay');
         const periodSelect = document.getElementById('periodSelect');
         
-        // Critical safety check: If layout elements aren't ready, don't crash
+        // Critical safety check: If elements aren't ready, exit safely instead of freezing
         if (!grid || !display || !periodSelect) return;
         
         const selectedPeriod = periodSelect.value;
@@ -59,6 +61,7 @@
         grid.innerHTML = '';
         display.innerText = `${monthNames[month]} ${year}`;
 
+        // Create Day Header Headers
         const dayNames = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
         dayNames.forEach(name => {
             let div = document.createElement('div');
@@ -70,12 +73,14 @@
         let firstDay = new Date(year, month, 1).getDay();
         let daysInMonth = new Date(year, month + 1, 0).getDate();
 
+        // Render Empty Buffer Slots
         for (let i = 0; i < firstDay; i++) {
             let div = document.createElement('div');
             div.className = 'day empty';
             grid.appendChild(div);
         }
 
+        // Render Calendar Numerical Grid Cells
         for (let day = 1; day <= daysInMonth; day++) {
             let div = document.createElement('div');
             div.className = 'day';
@@ -85,6 +90,7 @@
             numDiv.innerText = day;
             div.appendChild(numDiv);
 
+            // Construct strict matching keys (YYYY-MM-DD)
             let meshMonth = String(month + 1).padStart(2, '0');
             let meshDay = String(day).padStart(2, '0');
             let dateKey = `${year}-${meshMonth}-${meshDay}`;
@@ -100,8 +106,8 @@
         }
     }
 
+    // 3. Google Sheets Live Data Connector
     function loadEventsFromGoogleSheet() {
-        // Cache bust parameter forces Google to serve live spreadsheet edits instantly
         const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1nO7Z8-25ZzQyOQ-5h2Y6h8vY_q2tT8C-9yO8k_Y8N8x9L6u_Z3_M6pB-B7V8X/pub?output=csv&cachebust=' + new Date().getTime();
 
         fetch(sheetUrl)
@@ -120,11 +126,12 @@
                     
                     let columns = row.split(',');
                     if (columns && columns.length >= 2) {
-                        // Safe fallback parsing prevents undefined script crashes
+                        // Safe text fallback processing
                         let rawDate = columns[0] ? String(columns[0]).replace(/["\r\n]/g, '').trim() : '';
                         let periodKey = columns[1] ? String(columns[1]).replace(/["\r\n]/g, '').trim() : '';
                         let eventText = columns[2] ? String(columns[2]).replace(/["\r\n]/g, '').replace(/\\n/g, '\n').trim() : '';
 
+                        // Pad missing zeros for short date formats safely
                         let dateStr = "";
                         let dateParts = rawDate.split(/[-/]/); 
                         if (dateParts.length === 3) {
@@ -145,11 +152,12 @@
                 generateCalendar(currentMonth, currentYear);
             })
             .catch(error => {
-                console.error("Error loading sheet:", error);
+                console.error("Error loading CSV file:", error);
                 generateCalendar(currentMonth, currentYear);
             });
     }
 
+    // 4. Navigation Layout Handlers
     function updateCalendar() { 
         generateCalendar(currentMonth, currentYear); 
     }
@@ -166,6 +174,7 @@
         updateCalendar(); 
     }
 
+    // 5. App Window Initializer
     window.onload = function() { 
         loadEventsFromGoogleSheet(); 
     };
