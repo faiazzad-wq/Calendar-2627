@@ -100,59 +100,59 @@
     }
 
     function loadEventsFromGoogleSheet() {
-        const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1nO7Z8-25ZzQyOQ-5h2Y6h8vY_q2tT8C-9yO8k_Y8N8x9L6u_Z3_M6pB-B7V8X/pub?output=csv';
+    const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1nO7Z8-25ZzQyOQ-5h2Y6h8vY_q2tT8C-9yO8k_Y8N8x9L6u_Z3_M6pB-B7V8X/pub?output=csv';
 
-        fetch(sheetUrl)
-            .then(response => response.text())
-            .then(data => {
-                if (!data) {
-                    generateCalendar(currentMonth, currentYear);
-                    return;
-                }
+    fetch(sheetUrl)
+        .then(response => response.text())
+        .then(data => {
+            if (!data) {
+                generateCalendar(currentMonth, currentYear);
+                return;
+            }
+            
+            let rows = data.split(/\r?\n/).slice(1);
+            events = {};
+
+            rows.forEach(row => {
+                if (!row.trim()) return;
                 
-                let rows = data.split(/\r?\n/).slice(1);
-                events = {};
+                let columns = row.split(',');
+                
+                if (columns.length >= 3) {
+                    let rawDate = columns[0].replace(/["\r\n]/g, '').trim();
+                    let rawPeriod = columns[1].replace(/["\r\n]/g, '').trim().toUpperCase();
+                    let eventText = columns[2].replace(/["\r\n]/g, '').replace(/\\n/g, '\n').trim();
 
-                rows.forEach(row => {
-                    if (!row.trim()) return;
-                    
-                    let columns = row.split(',');
-                    
-                    if (columns.length >= 3) {
-                        let rawDate = columns[0].replace(/["\r\n]/g, '').trim();
-                        let rawPeriod = columns[1].replace(/["\r\n]/g, '').trim().toUpperCase();
-                        let eventText = columns[2].replace(/["\r\n]/g, '').replace(/\\n/g, '\n').trim();
-
-                        // Robust Date Normalizer: Converts any YYYY-MM-DD variation to pad leading zeros perfectly
-                        let dateStr = "";
-                        let dateParts = rawDate.split(/[-/]/); // Handles dashes or slashes safely
-                        if (dateParts.length === 3) {
-                            let year = dateParts[0];
-                            let month = String(parseInt(dateParts[1], 10)).padStart(2, '0');
-                            let day = String(parseInt(dateParts[2], 10)).padStart(2, '0');
-                            dateStr = `${year}-${month}-${day}`;
-                        } else {
-                            dateStr = rawDate;
-                        }
-
-                        let periodKey = "";
-                        if (rawPeriod === "2") periodKey = "period1";
-                        if (rawPeriod === "3B" || rawPeriod === "3") periodKey = "period2";
-                        if (rawPeriod === "4") periodKey = "period3";
-
-                        if (dateStr && periodKey) {
-                            if (!events[dateStr]) events[dateStr] = {};
-                            events[dateStr][periodKey] = eventText;
-                        }
+                    // Cleanly force single digit months/days to pad zeros (transforms 2026-9-8 into 2026-09-08)
+                    let dateStr = "";
+                    let dateParts = rawDate.split(/[-/]/); 
+                    if (dateParts.length === 3) {
+                        let year = dateParts[0];
+                        let month = String(parseInt(dateParts[1], 10)).padStart(2, '0');
+                        let day = String(parseInt(dateParts[2], 10)).padStart(2, '0');
+                        dateStr = `${year}-${month}-${day}`;
+                    } else {
+                        dateStr = rawDate;
                     }
-                });
-                generateCalendar(currentMonth, currentYear);
-            })
-            .catch(error => {
-                console.error(error);
-                generateCalendar(currentMonth, currentYear);
+
+                    let periodKey = "";
+                    if (rawPeriod === "2") periodKey = "period1";
+                    if (rawPeriod === "3B" || rawPeriod === "3") periodKey = "period2";
+                    if (rawPeriod === "4") periodKey = "period3";
+
+                    if (dateStr && periodKey) {
+                        if (!events[dateStr]) events[dateStr] = {};
+                        events[dateStr][periodKey] = eventText;
+                    }
+                }
             });
-    }
+            generateCalendar(currentMonth, currentYear);
+        })
+        .catch(error => {
+            console.error(error);
+            generateCalendar(currentMonth, currentYear);
+        });
+}
 
     function updateCalendar() { 
         generateCalendar(currentMonth, currentYear); 
