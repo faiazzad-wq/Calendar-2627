@@ -208,30 +208,43 @@ function loadEventsFromGoogleSheet() {
         .then(data => {
             if (!data) return;
             
-            // Handle both Windows and Mac line breaks cleanly
-            let rows = data.split(/\r?\n/).slice(1); 
-            events = {}; 
+            let rows = data.split(/\r?\n/).slice(1); // Handle Windows/Mac line breaks safely
+            events = {}; // Reset global events object
+
+            // Get all options from your HTML dropdown menu dynamically
+            var periodSelect = document.getElementById('periodSelect');
+            var selectOptions = [];
+            if (periodSelect) {
+                selectOptions = Array.from(periodSelect.options).map(opt => ({
+                    value: opt.value,
+                    text: opt.text.trim().toUpperCase()
+                }));
+            }
 
             rows.forEach(row => {
                 if (!row.trim()) return;
 
-                // Robust split: accepts commas OR semicolons safely
-                let columns = row.split(/[,;](?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                // Split by commas while safely respecting quotes around text entries
+                let columns = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                 if (columns.length >= 3) {
                     var dateStr = columns[0].trim().replace(/^"|"/g, '');
                     var rawPeriod = columns[1] ? columns[1].trim().toUpperCase().replace(/^"|"/g, '') : "";
                     var eventText = columns[2] ? columns[2].replace(/^"|"/g, '').replace(/\\n/g, '\n').trim() : "";
 
-                    // Translate spreadsheet text directly to your internal dropdown values
                     var periodKey = "";
+
+                    // Match sheet text directly against your actual dropdown options
                     if (rawPeriod === "2" || rawPeriod === "PERIOD 2") {
-                        periodKey = "period1";
+                        var found = selectOptions.find(o => o.text.includes("2"));
+                        periodKey = found ? found.value : "period1";
                     } else if (rawPeriod === "3B" || rawPeriod === "PERIOD 3B" || rawPeriod === "3") {
-                        periodKey = "period2";
+                        var found = selectOptions.find(o => o.text.includes("3B") || o.text.includes("3"));
+                        periodKey = found ? found.value : "period2";
                     } else if (rawPeriod === "4" || rawPeriod === "PERIOD 4") {
-                        periodKey = "period3";
+                        var found = selectOptions.find(o => o.text.includes("4"));
+                        periodKey = found ? found.value : "period3";
                     } else {
-                        periodKey = rawPeriod.toLowerCase(); // Fallback
+                        periodKey = rawPeriod.toLowerCase();
                     }
 
                     if (dateStr && periodKey) {
@@ -243,7 +256,7 @@ function loadEventsFromGoogleSheet() {
                 }
             });
 
-            // Re-render the calendar layout on screen with the new data loaded
+            // Re-render the calendar view once data is completely loaded
             generateCalendar(currentMonth, currentYear);
         })
         .catch(error => {
