@@ -51,6 +51,7 @@
         const display = document.getElementById('monthYearDisplay');
         const periodSelect = document.getElementById('periodSelect');
         
+        // Complete safety check to prevent layout crashes
         if (!grid || !display || !periodSelect) return;
         
         const selectedPeriod = periodSelect.value;
@@ -100,89 +101,59 @@
     }
 
     function loadEventsFromGoogleSheet() {
-    const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1nO7Z8-25ZzQyOQ-5h2Y6h8vY_q2tT8C-9yO8k_Y8N8x9L6u_Z3_M6pB-B7V8X/pub?output=csv';
+        // Appends a live timestamp to bypass Google's link caching mechanism completely
+        const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1nO7Z8-25ZzQyOQ-5h2Y6h8vY_q2tT8C-9yO8k_Y8N8x9L6u_Z3_M6pB-B7V8X/pub?output=csv&cachebust=' + new Date().getTime();
 
-    fetch(sheetUrl)
-        .then(response => response.text())
-        .then(data => {
-            if (!data) {
-                generateCalendar(currentMonth, currentYear);
-                return;
-            }
-            
-            // Split rows safely and clean out carriage returns entirely
-            let rows = data.split(/\r?\n/).slice(1);
-            events = {};
-
-            rows.forEach(row => {
-                if (!row.trim()) return;
-                
-                let columns = row.split(',');
-                
-                if (columns.length >= 3) {
-                    // Strips out all quotes, formatting symbols (\r), and trailing spaces
-                    let rawDate = columns[0].replace(/["\r\n]/g, '').trim();
-                    let periodKey = columns[1].replace(/["\r\n]/g, '').trim().toUpperCase(); 
-                    let eventText = columns[2].replace(/["\r\n]/g, '').replace(/\\n/g, '\n').trim();
-
-                    // Force single digit dates/months to pad zeros safely (YYYY-MM-DD)
-                    let dateStr = "";function loadEventsFromGoogleSheet() {
-const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1nO7Z8-25ZzQyOQ-5h2Y6h8vY_q2tT8C-9yO8k_Y8N8x9L6u_Z3_M6pB-B7V8X/pub?output=csv&cachebust=' + new Date().getTime();
-    fetch(sheetUrl)
-        .then(response => response.text())
-        .then(data => {
-            if (!data) {
-                generateCalendar(currentMonth, currentYear);
-                return;
-            }
-            
-            // Cleanly slice out lines and handle line endings perfectly
-            let rows = data.split(/\r?\n/).slice(1);
-            events = {};
-
-            rows.forEach(row => {
-                if (!row.trim()) return;
-                
-                // Flexible comma-splitting pattern
-                let columns = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                
-                if (columns && columns.length >= 2) {
-                    // Pull and sanitize values individually, providing fallbacks for empty cells
-                    let rawDate = columns[0] ? columns[0].replace(/["\r\n]/g, '').trim() : '';
-                    let periodKey = columns[1] ? columns[1].replace(/["\r\n]/g, '').trim().toUpperCase() : '';
-                    let eventText = columns[2] ? columns[2].replace(/["\r\n]/g, '').replace(/\\n/g, '\n').trim() : '';
-
-                    // Convert any YYYY-M-D variants from Google into exact YYYY-MM-DD keys
-                    let dateStr = "";
-                    let dateParts = rawDate.split(/[-/]/); 
-                    if (dateParts.length === 3) {
-                        let year = dateParts[0];
-                        let month = String(parseInt(dateParts[1], 10)).padStart(2, '0');
-                        let day = String(parseInt(dateParts[2], 10)).padStart(2, '0');
-                        dateStr = `${year}-${month}-${day}`;
-                    } else {
-                        dateStr = rawDate;
-                    }
-
-                    // Save the data to the event map if both structural markers exist
-                    if (dateStr && periodKey) {
-                        if (!events[dateStr]) events[dateStr] = {};
-                        events[dateStr][periodKey] = eventText;
-                    }
+        fetch(sheetUrl)
+            .then(response => response.text())
+            .then(data => {
+                if (!data) {
+                    generateCalendar(currentMonth, currentYear);
+                    return;
                 }
+                
+                let rows = data.split(/\r?\n/).slice(1);
+                events = {};
+
+                rows.forEach(row => {
+                    if (!row.trim()) return;
+                    
+                    let columns = row.split(',');
+                    if (columns && columns.length >= 2) {
+                        // Safely handle text conversions without throwing crashes
+                        let rawDate = columns[0] ? String(columns[0]).replace(/["\r\n]/g, '').trim() : '';
+                        let periodKey = columns[1] ? String(columns[1]).replace(/["\r\n]/g, '').trim() : '';
+                        let eventText = columns[2] ? String(columns[2]).replace(/["\r\n]/g, '').replace(/\\n/g, '\n').trim() : '';
+
+                        let dateStr = "";
+                        let dateParts = rawDate.split(/[-/]/); 
+                        if (dateParts.length === 3) {
+                            let year = dateParts[0];
+                            let month = String(parseInt(dateParts[1], 10)).padStart(2, '0');
+                            let day = String(parseInt(dateParts[2], 10)).padStart(2, '0');
+                            dateStr = `${year}-${month}-${day}`;
+                        } else {
+                            dateStr = rawDate;
+                        }
+
+                        if (dateStr && periodKey) {
+                            if (!events[dateStr]) events[dateStr] = {};
+                            events[dateStr][periodKey] = eventText;
+                        }
+                    }
+                });
+                generateCalendar(currentMonth, currentYear);
+            })
+            .catch(error => {
+                console.error("Error loading sheet:", error);
+                generateCalendar(currentMonth, currentYear);
             });
-            generateCalendar(currentMonth, currentYear);
-        })
-        .catch(error => {
-            console.error("Error pulling spreadsheet:", error);
-            generateCalendar(currentMonth, currentYear);
-        });
-}
+    }
+
     function updateCalendar() { 
         generateCalendar(currentMonth, currentYear); 
     }
     
-    // Explicitly matching lowercase naming from HTML buttons
     function prevMonth() { 
         currentMonth--; 
         if (currentMonth < 0) { currentMonth = 11; currentYear--; } 
@@ -199,6 +170,5 @@ const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1nO7Z8-25ZzQ
         loadEventsFromGoogleSheet(); 
     };
 </script>
-
 </body>
 </html>
